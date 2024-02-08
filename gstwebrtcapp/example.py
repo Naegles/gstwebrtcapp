@@ -224,8 +224,6 @@ async def test_fed(feed_name):
         )
 
         weights = agent.get_weights()
-        print("weights: ", weights)
-
 
         conn = AhoyConnector(
             pipeline_config=app_cfg,
