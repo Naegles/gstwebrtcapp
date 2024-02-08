@@ -164,11 +164,10 @@ async def test_drl():
         )
 
         weights = agent.get_weights()
-        sel_weights = dict((key, value) for key, value in weights.items() if ("policy" in key or "shared_net" in key or "action" in key))
+        print("weights: ", weights)
 
-        # print weights
-        for key, value in sel_weights.items():
-            print(f"{key}: {value}")
+        # Log weights
+        LOGGER.info("weights: ", weights.to_string())
 
 
         conn = AhoyConnector(
