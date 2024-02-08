@@ -222,7 +222,7 @@ class DrlManager:
 
     def get_weights(self):
         """get the weights of the model"""
-        return self.model.policy
+        return self.model.policy.state_dict()
 
     def set_weights(self, weights):
         """set the weights of the model"""
