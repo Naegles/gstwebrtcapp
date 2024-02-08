@@ -226,7 +226,7 @@ class DrlManager:
 
     def set_weights(self, weights):
         """set the weights of the model"""
-        self.model.policy.load_state_dict(weights)
+        self.model.policy.load_state_dict(weights, strict=False)
 
 
     def _set_save_paths(self, save_log_path: str, save_model_path: str) -> None:
