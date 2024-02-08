@@ -163,7 +163,7 @@ async def test_drl():
             ),
         )
 
-        print(agent.config)
+        print(agent.get_weights())
 
         conn = AhoyConnector(
             pipeline_config=app_cfg,
