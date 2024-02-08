@@ -163,13 +163,6 @@ async def test_drl():
             ),
         )
 
-        weights = agent.get_weights()
-        print("weights: ", weights)
-
-        # Log weights
-        LOGGER.info("weights: ", weights.to_string())
-
-
         conn = AhoyConnector(
             pipeline_config=app_cfg,
             agent=agent,
@@ -229,6 +222,12 @@ async def test_fed(feed_name):
                 constants={"MAX_BITRATE_STREAM_MBPS": 6},  # Ahoy fixes the max bitrate to 6 Mbps in SDP
             ),
         )
+
+        weights = agent.get_weights()
+        print("weights: ", weights)
+
+        # Log weights
+        LOGGER.info("weights: ", weights.to_string())
 
         conn = AhoyConnector(
             pipeline_config=app_cfg,
