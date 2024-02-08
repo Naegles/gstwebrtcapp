@@ -163,12 +163,74 @@ async def test_drl():
             ),
         )
 
+        print(agent.config)
+
         conn = AhoyConnector(
             pipeline_config=app_cfg,
             agent=agent,
             server=AHOY_DIRECTOR_URL,
             api_key=API_KEY,
             feed_name="drl_test",
+            stats_update_interval=stats_update_interval,
+        )
+
+        await conn.connect_coro()
+        await conn.webrtc_coro()
+
+    except KeyboardInterrupt:
+        LOGGER.info("KeyboardInterrupt received, exiting...")
+        return
+
+
+async def test_fed_start():
+  task1 = asyncio.create_task(test_fed("fed1"))
+  task2 = asyncio.create_task(test_fed("fed2"))
+
+  await task1
+  await task2
+  
+
+async def test_fed(feed_name):
+    # run it to test drl agent
+    try:
+        episodes = 10
+        episode_length = 50
+        stats_update_interval = 3.0
+
+        app_cfg = GstWebRTCAppConfig(video_url=VIDEO_SOURCE)
+
+        agent = DrlAgent(
+            config=DrlConfig(
+                mode="train",
+                model_name="sac",
+                episodes=episodes,
+                episode_length=episode_length,
+                state_update_interval=stats_update_interval,
+                hyperparams_cfg={
+                    "policy": "MultiInputPolicy",
+                    "batch_size": 128,
+                    "ent_coef": "auto",
+                    "policy_kwargs": {"log_std_init": -1, "activation_fn": "relu", "net_arch": [256, 256]},
+                },
+                callbacks=['print_step'],
+                save_model_path="./models",
+                save_log_path="./logs",
+                verbose=2,
+            ),
+            controller=Controller(),
+            mdp=ViewerMDP(
+                reward_function_name="qoe_ahoy",
+                episode_length=episode_length,
+                constants={"MAX_BITRATE_STREAM_MBPS": 6},  # Ahoy fixes the max bitrate to 6 Mbps in SDP
+            ),
+        )
+
+        conn = AhoyConnector(
+            pipeline_config=app_cfg,
+            agent=agent,
+            server=AHOY_DIRECTOR_URL,
+            api_key=API_KEY,
+            feed_name=feed_name,
             stats_update_interval=stats_update_interval,
         )
 
@@ -223,4 +285,4 @@ async def default():
 if __name__ == "__main__":
     if uvloop is not None:
         asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-    asyncio.run(default())
+    asyncio.run(test_fed_start())

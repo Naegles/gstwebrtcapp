@@ -37,3 +37,10 @@ class DrlAgent(Agent):
     def stop(self) -> None:
         LOGGER.info("INFO: stopping DRL agent...")
         self.manager.stop()
+
+    def get_weights(self):
+        return self.manager.get_weights()
+
+    def set_weights(self, weights):
+        self.manager.set_weights(weights)
+

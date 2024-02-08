@@ -220,6 +220,15 @@ class DrlManager:
                     [{"episode_rewards": i, "episode_lengths": j} for i, j in zip(episode_rewards, episode_lengths)]
                 )
 
+    def get_weights(self):
+        """get the weights of the model"""
+        return self.model.policy.state_dict()
+
+    def set_weights(self, weights):
+        """set the weights of the model"""
+        self.model.policy.load_state_dict(weights)
+
+
     def _set_save_paths(self, save_log_path: str, save_model_path: str) -> None:
         assert save_log_path is not None and save_model_path is not None, "ERROR: save paths are not set!"
         timestamp = time.strftime("%Y%m%d-%H%M%S-%f")[:-3]
