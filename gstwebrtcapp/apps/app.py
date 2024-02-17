@@ -29,7 +29,7 @@ from gi.repository import GstWebRTC
 
 from apps.pipelines import DEFAULT_BIN_PIPELINE
 from utils.base import LOGGER, GSTWEBRTCAPP_EXCEPTION, wait_for_condition
-from utils.gst import get_gst_encoder_name
+from utils.gst import DEFAULT_GCC_SETTINGS, get_gst_encoder_name
 
 
 @dataclass
@@ -38,13 +38,18 @@ class GstWebRTCAppConfig:
     Configuration class for GstWebRTCApp.
 
     :param str pipeline_str: GStreamer pipeline string. Default is the default pipeline string for webrtcbin.
-    :param str video_url: URL of the video source (RTSP, RTMP, FILE, etc.)
-    :param str codec: Name of the video codec (encoder). Default is "h264". Possible options are "h264", "h265", "vp8", "vp9", "av1".
+    :param str video_url: URL of the video source (RTSP, RTMP, FILE, etc.). Default is None.
+    :param str codec: Name of the video codec (encoder). Possible options are "h264", "h265", "vp8", "vp9", "av1".
+        Default is "h264".
     :param int bitrate: Bitrate of the video in Kbps. Default is 2000.
-    :param Dict[str, int] resolution: Dictionary containing width and height of the video resolution. Default is {"width": 1280, "height": 720}.
+    :param Dict[str, int] resolution: Dictionary containing width and height of the video resolution.
+        Default is {"width": 1280, "height": 720}.
     :param int framerate: Frame rate of the video. Default is 20.
     :param int fec_percentage: Forward error correction percentage. Default is 20.
+    :param Dict[str, int] | None gcc_settings: Dictionary containing GCC settings. If None, gcc will not be used.
+        Default is {"min-bitrate": 400000, "max-bitrate": 20000000}.
     :param List[Dict[str, Any]] data_channels_cfgs: List of dictionaries containing data channel configurations.
+    :param int priority: priority (DSCP marking) for the sender RTP stream (from 1 to 4). Default is 2 (DSCP 0).
     :param int max_timeout: Maximum timeout for operations in seconds. Default is 60.
     :param bool is_cuda: Flag indicating whether the pipeline uses CUDA for HA encoding. Currently only H264 is supported. Default is False.
     :param bool is_debug: Flag indicating whether debugging GStreamer logs are enabled. Default is False.
@@ -57,7 +62,9 @@ class GstWebRTCAppConfig:
     resolution: Dict[str, int] = field(default_factory=lambda: {"width": 1280, "height": 720})
     framerate: int = 20
     fec_percentage: int = 20
+    gcc_settings: Dict[str, int] | None = field(default_factory=lambda: DEFAULT_GCC_SETTINGS)
     data_channels_cfgs: List[Dict[str, Any]] = field(default_factory=lambda: [])
+    priority: int = 2
     max_timeout: int = 60
     is_cuda: bool = False
     is_debug: bool = False
@@ -73,20 +80,25 @@ class GstWebRTCApp(metaclass=ABCMeta):
         self.pipeline_str = config.pipeline_str
         self.video_url = config.video_url
         self.encoder_gst_name = get_gst_encoder_name(config.codec, config.is_cuda)
-        self.is_cuda = config.is_cuda
-        if self.is_cuda and config.codec == "h264":
-            # FIXME: replace it later with a custom configurator
+        self.is_cuda = config.is_cuda and config.codec.startswith('h26')  # FIXME: so far only h264/h265 are supported
+        if self.is_cuda:
+            # FIXME: add support for inserting cudaupload and cudaconvert into the pipeline
             pattern = re.compile(r'(!\s*.*?name=encoder.*?!)')
-            replacement_line = '! nvh264enc name=encoder preset=low-latency-hq !'
+            replacement_line = (
+                '! nvh264enc name=encoder preset=low-latency-hq gop-size=2560 rc-mode=cbr-ld-hq zerolatency=true !'
+                if config.codec == 'h264'
+                else '! nvh265enc name=encoder preset=low-latency-hq gop-size=2560 rc-mode=cbr-ld-hq zerolatency=true !'
+            )
             self.pipeline_str = pattern.sub(replacement_line, self.pipeline_str)
 
         self.bitrate = config.bitrate
         self.resolution = config.resolution
         self.framerate = config.framerate
         self.fec_percentage = config.fec_percentage
-
+        self.gcc_settings = config.gcc_settings
         self.data_channels_cfgs = config.data_channels_cfgs
         self.data_channels = {}
+        self.priority = config.priority
         self.max_timeout = config.max_timeout
         self.is_running = False
 
