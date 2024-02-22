@@ -230,6 +230,42 @@ class DrlBreakCallback(BaseCallback):
             self.training_env.close()
 
 
+class FedWeightUpdateCallback(BaseCallback):
+    """
+    Callback used to update the weights in the federated learning
+    """
+    
+    def __init__(self, update_freq=10, result_queue=None, update_queue=None, verbose=0):
+        super().__init__(verbose)
+        self.update_freq = update_freq
+        self.result_queue = result_queue
+        self.update_queue = update_queue
+        
+    def _on_step(self) -> bool:
+        if(self.num_timesteps % self.update_freq == 0):
+            # Get current weights and put them in the result queue
+            weights = self.get_weights()
+            self.result_queue.put(weights)
+            
+            # Wait for updated weights to appear in update_queue, then update the model with them
+            while self.update_queue.empty():
+                pass
+            averaged_weights = self.update_queue.get()
+            self.set_weights(averaged_weights)
+            LOGGER.info(f"OK: Weights Updated\n")
+        
+        return True
+    
+    
+    def get_weights(self):
+        """get the weights of the model"""
+        return self.model.policy.state_dict()
+
+    def set_weights(self, weights):
+        """set the weights of the model"""
+        self.model.policy.load_state_dict(weights)
+
+
 class DrlEvaluatingCallback:
     """
     auxilary class for self-producing a default callback for an old way of calling in evaluate_policy() function.
@@ -253,3 +289,6 @@ class DrlEvaluatingCallback:
             self.step_printing_callback._on_step()
         if self.verbose == 2:
             self.step_callback._on_step()
+            
+
+
