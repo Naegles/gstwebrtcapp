@@ -16,6 +16,7 @@ from control.drl.agent import DrlAgent
 from control.drl.config import DrlConfig
 from control.drl.mdp import ViewerMDP
 from control.recorder.agent import CsvViewerRecorderAgent
+from network.controller import NetworkController
 from utils.base import LOGGER
 
 try:
@@ -180,58 +181,65 @@ async def test_drl():
         return
 
 
-async def test_fed_start():
-  task1 = asyncio.create_task(test_fed("fed1"))
-  task2 = asyncio.create_task(test_fed("fed2"))
-
-  await task1
-  await task2
-  
-
-async def test_fed(feed_name):
-    # run it to test drl agent
+async def test_drl_eval():
     try:
-        episodes = 10
-        episode_length = 50
+        episodes = 5
+        episode_length = 512
         stats_update_interval = 3.0
 
         app_cfg = GstWebRTCAppConfig(video_url=VIDEO_SOURCE)
 
+        drl_cfg = DrlConfig(
+            mode="eval",
+            model_file="model.zip",
+            model_name="sac",
+            episodes=episodes,
+            episode_length=episode_length,
+            state_update_interval=stats_update_interval,
+            deterministic=True,
+        )
+
         agent = DrlAgent(
-            config=DrlConfig(
-                mode="train",
-                model_name="sac",
-                episodes=episodes,
-                episode_length=episode_length,
-                state_update_interval=stats_update_interval,
-                hyperparams_cfg={
-                    "policy": "MultiInputPolicy",
-                    "batch_size": 128,
-                    "ent_coef": "auto",
-                    "policy_kwargs": {"log_std_init": -1, "activation_fn": "relu", "net_arch": [256, 256]},
-                },
-                callbacks=['print_step'],
-                save_model_path="./models",
-                save_log_path="./logs",
-                verbose=2,
-            ),
+            config=drl_cfg,
             controller=Controller(),
             mdp=ViewerMDP(
                 reward_function_name="qoe_ahoy",
                 episode_length=episode_length,
-                constants={"MAX_BITRATE_STREAM_MBPS": 6},  # Ahoy fixes the max bitrate to 6 Mbps in SDP
+                constants={"MAX_BITRATE_STREAM_MBPS": 6},
             ),
         )
-
-        weights = agent.get_weights()
 
         conn = AhoyConnector(
             pipeline_config=app_cfg,
             agent=agent,
             server=AHOY_DIRECTOR_URL,
             api_key=API_KEY,
-            feed_name=feed_name,
+            feed_name="drl_test_eval",
             stats_update_interval=stats_update_interval,
+        )
+
+        await conn.connect_coro()
+        await conn.webrtc_coro()
+
+    except KeyboardInterrupt:
+        LOGGER.info("KeyboardInterrupt received, exiting...")
+        return
+
+
+async def test_network_controller():
+    try:
+        cfg = GstWebRTCAppConfig(video_url=VIDEO_SOURCE)
+
+        network_controller = NetworkController(gt_bandwidth=10.0, interval=10.0)
+        network_controller.generate_rules(100, [0.7, 0.2, 0.1])
+
+        conn = AhoyConnector(
+            pipeline_config=cfg,
+            server=AHOY_DIRECTOR_URL,
+            api_key=API_KEY,
+            feed_name="test_network_controller",
+            stats_update_interval=1.0,
+            network_controller=network_controller,
         )
 
         await conn.connect_coro()
@@ -285,4 +293,4 @@ async def default():
 if __name__ == "__main__":
     if uvloop is not None:
         asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-    asyncio.run(test_fed_start())
+    asyncio.run(default())
