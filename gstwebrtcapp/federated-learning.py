@@ -7,7 +7,7 @@ Author:
 
 import asyncio
 import aioprocessing
-
+from aioprocessing import AioProcess, AioManager
 from apps.app import GstWebRTCAppConfig
 from apps.ahoyapp.connector import AhoyConnector
 from apps.pipelines import DEFAULT_BIN_CUDA_PIPELINE, DEFAULT_SINK_PIPELINE
@@ -95,20 +95,19 @@ async def test_fed(feed_name, result_queue, update_queue, update_freq):
 
 
 def update_loop(number_of_updates, num_workers, result_queue, update_queue):
-    for i in range(number_of_updates):
+    while True:
         # Wait until the result queue is full
         while not result_queue.full():
             pass
         # Get all the weights from the result queue
         weights = []
         for i in range(num_workers):
-            weights.append(result_queue.get())   
-        print(weights)
+            weights.append(result_queue.get())
     
-    # Average the weights and fill the update queue with the averaged weights
-    averaged_weights = average_weights(weights)
-    for i in range(num_workers):
-        update_queue.put(averaged_weights)
+        # Average the weights and fill the update queue with the averaged weights
+        averaged_weights = average_weights(weights)
+        for i in range(num_workers):
+            update_queue.put(averaged_weights)
 
 
 def create_workers(num_workers, result_queue, update_queue, update_freq):
@@ -122,13 +121,15 @@ def create_workers(num_workers, result_queue, update_queue, update_freq):
 
 if __name__ == "__main__":
     # Create n federated workers
-    num_workers = 2
-    result_queue = aioprocessing.Queue(maxsize=num_workers)
-    update_queue = aioprocessing.Queue(maxsize=num_workers)
-    workers = create_workers(num_workers, result_queue, update_queue, update_freq=10)
+    num_workers = 4
+    with aioprocessing.AioManager() as manager:
+        result_queue = manager.AioQueue(maxsize=num_workers)
+        update_queue = manager.AioQueue(maxsize=num_workers)
+        workers = create_workers(num_workers, result_queue, update_queue, update_freq=10)
+        # Start the weight update loop
+        update_loop(num_workers, result_queue, update_queue)
     
-    # Start the weight update loop
-    update_loop(10, num_workers, result_queue, update_queue)
+    
     
     
     
