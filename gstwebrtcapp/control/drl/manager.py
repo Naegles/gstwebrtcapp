@@ -20,6 +20,7 @@ from control.drl.callbacks import (
 )
 from control.controller import Controller
 from control.drl.env import DrlEnv
+from control.drl.env import FedEnv
 from control.drl.mconfigurator import DrlModelConfigurator
 from control.drl.mdp import MDP
 from utils.base import LOGGER
@@ -311,7 +312,7 @@ class FedManager:
             LOGGER.info("INFO: Cuda is OFF: using cpu only\n")
 
         # initialize env
-        self.env = DrlEnv(
+        self.env = FedEnv(
             controller=self.controller,
             mdp=self.mdp,
             max_episodes=self.episodes,

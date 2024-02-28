@@ -31,22 +31,42 @@ def average_weights(weights_list):
     weightResult = {}
     for key in weights_list[0]:
         weightResult[key] = sum(weights[key] for weights in weights_list) / len(weights_list)
-    return weightResult
+    return weightResult  
 
-    
-def test_fed_start(feed_name, result_queue, update_queue, update_freq):
+
+def create_workers(num_workers, result_queue, update_queue, update_freq):
+    workers = []
+    for i in range(num_workers):
+        if i == 0:
+            p = aioprocessing.AioProcess(target=test_fed_start, args=(f"feed_{i}", result_queue, update_queue, update_freq, True))
+            p.start()
+            workers.append(p)
+        else:
+            p = aioprocessing.AioProcess(target=test_fed_start, args=(f"feed_{i}", result_queue, update_queue, update_freq, False))
+            p.start()
+            workers.append(p)
+    return workers
+
+
+def test_fed_start(feed_name, result_queue, update_queue, update_freq, isLogging):
     if uvloop is not None:
         asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-    asyncio.run(test_fed(feed_name, result_queue, update_queue, update_freq))
+    asyncio.run(test_fed(feed_name, result_queue, update_queue, update_freq, isLogging))
 
-async def test_fed(feed_name, result_queue, update_queue, update_freq):
+async def test_fed(feed_name, result_queue, update_queue, update_freq, isLogging):
     # run it to test drl agent
     try:
-        episodes = 10
+        episodes = 200
         episode_length = 50
         stats_update_interval = 3.0
 
         app_cfg = GstWebRTCAppConfig(video_url=VIDEO_SOURCE, pipeline_str=DEFAULT_H265_IN_WEBRTCBIN_H264_OUT_PIPELINE)
+        
+        callbacksToUse = ['print_step', 'federated']
+        verbosity = 2
+        if(isLogging):
+            callbacksToUse = ['print_step', 'federated', 'save_step', 'save_model']
+            verbosity = 2
 
         agent = FedAgent(
             config=FedConfig(
@@ -64,14 +84,14 @@ async def test_fed(feed_name, result_queue, update_queue, update_freq):
                     "ent_coef": "auto",
                     "policy_kwargs": {"log_std_init": -1, "activation_fn": "relu", "net_arch": [256, 256]},
                 },
-                callbacks=['print_step', 'federated'],
-                save_model_path="./models",
-                save_log_path="./logs",
-                verbose=2,
+                callbacks=callbacksToUse,
+                save_model_path="./fedModels",
+                save_log_path="./fedLogs",
+                verbose=verbosity,
             ),
             controller=Controller(),
             mdp=ViewerMDP(
-                reward_function_name="qoe_ahoy",
+                reward_function_name="qoe_fed",
                 episode_length=episode_length,
                 constants={"MAX_BITRATE_STREAM_MBPS": 6},  # Ahoy fixes the max bitrate to 6 Mbps in SDP
             ),
@@ -94,7 +114,7 @@ async def test_fed(feed_name, result_queue, update_queue, update_freq):
         return
 
 
-def update_loop(number_of_updates, num_workers, result_queue, update_queue):
+def update_loop(num_workers, result_queue, update_queue):
     while True:
         # Wait until the result queue is full
         while not result_queue.full():
@@ -109,28 +129,15 @@ def update_loop(number_of_updates, num_workers, result_queue, update_queue):
         for i in range(num_workers):
             update_queue.put(averaged_weights)
 
-
-def create_workers(num_workers, result_queue, update_queue, update_freq):
-    workers = []
-    for i in range(num_workers):
-        p = aioprocessing.AioProcess(target=test_fed_start, args=(f"feed_{i}", result_queue, update_queue, update_freq))
-        p.start()
-        workers.append(p)
-    return workers
-
-
 if __name__ == "__main__":
     # Create n federated workers
-    num_workers = 4
+    num_workers = 2
     with aioprocessing.AioManager() as manager:
         result_queue = manager.AioQueue(maxsize=num_workers)
         update_queue = manager.AioQueue(maxsize=num_workers)
         workers = create_workers(num_workers, result_queue, update_queue, update_freq=10)
         # Start the weight update loop
-        update_loop(num_workers, result_queue, update_queue)
-    
-    
-    
+        update_loop(num_workers, result_queue, update_queue)  
     
     
     

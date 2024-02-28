@@ -6,6 +6,7 @@ import os
 
 from stable_baselines3.common.callbacks import BaseCallback, CheckpointCallback
 from stable_baselines3.common.vec_env import VecEnv
+from control.drl.env import FedEnv
 
 from utils.base import LOGGER
 
@@ -24,7 +25,7 @@ class DrlCheckpointCallback(CheckpointCallback):
 
     def __init__(
         self,
-        save_freq: int = 5000,
+        save_freq: int = 100,
         save_path: str = "./models",
         name_prefix: str = "drl_model",
         save_replay_buffer: bool = True,
@@ -95,6 +96,7 @@ class DrlPrintStepCallback(BaseCallback):
             state = self.env.get_attr("state")[0]
             rewards = self.env.get_attr("reward_parts")[0]
             is_finished = self.env.get_attr("is_finished")[0]
+            weigthUpdates = self.env.get_attr("weightUpdates")[0]
         else:
             episodes = self.env.episodes
             steps = self.env.steps
@@ -102,6 +104,8 @@ class DrlPrintStepCallback(BaseCallback):
             state = self.env.state
             rewards = self.env.reward_parts
             is_finished = self.env.is_finished
+            weigthUpdates = self.env.weightUpdates
+                
 
         state = {k: v.tolist() for k, v in state.items()}
         time_elapsed = datetime.datetime.now() - self.start_time
@@ -112,6 +116,8 @@ class DrlPrintStepCallback(BaseCallback):
                 LOGGER.info(
                     "INFO: Training step info: \n "
                     + f"Time elapsed (hh:mm:ss.ms) {time_elapsed}"
+                    + "\n"
+                    + f"Number of Weight Updates: {weigthUpdates}"
                     + "\n"
                     + f"Episodes: {episodes}"
                     + "\n"
@@ -130,6 +136,8 @@ class DrlPrintStepCallback(BaseCallback):
                     LOGGER.info(
                         "INFO: Training step info: \n "
                         + f"Time elapsed (hh:mm:ss.ms) {time_elapsed}"
+                        + "\n"
+                        + f"Number of Weight Updates: {weigthUpdates}"
                         + "\n"
                         + f"Episodes: {episodes}"
                         + "\n"
@@ -242,7 +250,7 @@ class FedWeightUpdateCallback(BaseCallback):
         self.update_queue = update_queue
         
     def _on_step(self) -> bool:
-        if(self.num_timesteps % self.update_freq == 0):
+        if(self.num_timesteps % self.update_freq == 0 or self.num_timesteps == 1):
             # Get current weights and put them in the result queue
             weights = self.get_weights()
             self.result_queue.put(weights)
@@ -252,10 +260,11 @@ class FedWeightUpdateCallback(BaseCallback):
                 pass
             averaged_weights = self.update_queue.get()
             self.set_weights(averaged_weights)
+            
+            # Increment the number of weight updates
             LOGGER.info(f"OK: Weights Updated\n")
-        
+            self.training_env.env_method("increment_weightUpdates")
         return True
-    
     
     def get_weights(self):
         """get the weights of the model"""
