@@ -58,12 +58,12 @@ async def test_fed(feed_name, result_queue, update_queue, update_freq, isLogging
     try:
         episodes = 200
         episode_length = 50
-        stats_update_interval = 3.0
+        stats_update_interval = 1.0
 
         app_cfg = GstWebRTCAppConfig(video_url=VIDEO_SOURCE, pipeline_str=DEFAULT_H265_IN_WEBRTCBIN_H264_OUT_PIPELINE)
         
         callbacksToUse = ['print_step', 'federated']
-        verbosity = 2
+        verbosity = 1
         if(isLogging):
             callbacksToUse = ['print_step', 'federated', 'save_step', 'save_model']
             verbosity = 2
@@ -71,7 +71,7 @@ async def test_fed(feed_name, result_queue, update_queue, update_freq, isLogging
         agent = FedAgent(
             config=FedConfig(
                 mode="train",
-                model_name="sac",
+                model_name="ppo",
                 episodes=episodes,
                 episode_length=episode_length,
                 state_update_interval=stats_update_interval,
@@ -93,7 +93,7 @@ async def test_fed(feed_name, result_queue, update_queue, update_freq, isLogging
             mdp=ViewerMDP(
                 reward_function_name="qoe_fed",
                 episode_length=episode_length,
-                constants={"MAX_BITRATE_STREAM_MBPS": 6},  # Ahoy fixes the max bitrate to 6 Mbps in SDP
+                constants={"MAX_BITRATE_STREAM_MBPS": 10},  # Ahoy fixes the max bitrate to 10 Mbps in SDP
             ),
         )
 

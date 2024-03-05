@@ -253,7 +253,8 @@ class QoeFed(RewardFunction):
             or self.state["fractionRtt"] > 0.3
             or (self.state["txRate"] > 0 and self.state["rxRate"] / self.state["txRate"] < 0.2)
             or self.state["interarrivalJitter"] > 0.25
-            or self.state["fractionPliRate"] > 0.001
+            #or self.state["fractionPliRate"] > 0.001
+            or self.state["fractionPliRate"] > 0.01
         ):
             reward = 0.0
 
