@@ -2,7 +2,7 @@ import csv
 import os
 import time
 import torch
-from typing import Dict, List, Union
+from typing import Dict, List, Tuple, Union
 
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.evaluation import evaluate_policy
@@ -18,11 +18,11 @@ from control.drl.callbacks import (
     DrlBreakCallback,
     FedWeightUpdateCallback,
 )
-from control.controller import Controller
 from control.drl.env import DrlEnv
 from control.drl.env import FedEnv
 from control.drl.mconfigurator import DrlModelConfigurator
 from control.drl.mdp import MDP
+from message.client import MqttPair
 from utils.base import LOGGER
 
 
@@ -35,20 +35,23 @@ class DrlManager:
         4) performs a training or evaluation process for the DRL model using SB3 backend.\n
 
     :param config: DRL model params, look into ``control/drl/config.py``.
-    :param controller: The Controller instance, look into ``control/controller.py``.
     :param mdp: The MDP instance, look into ``control/drl/mdp.py``.
+    :param mqtts: MQTT instances`.
     """
 
     MAX_EPISODES = 1e9
 
-    def __init__(self, config: DrlConfig, controller: Controller, mdp: MDP):
+    def __init__(self, config: DrlConfig, mdp: MDP, mqtts: MqttPair):
         self.config = config
-        self.controller = controller
         self.mdp = mdp
+        self.mqtts = mqtts
 
         self._setup()
 
     def _setup(self) -> None:
+        # set mqqts for the mdp
+        self.mdp.mqtts = self.mqtts
+
         # set paths
         self.log_path, self.model_path = self._set_save_paths(self.config.save_log_path, self.config.save_model_path)
 
@@ -78,8 +81,8 @@ class DrlManager:
 
         # initialize env
         self.env = DrlEnv(
-            controller=self.controller,
             mdp=self.mdp,
+            mqtts=self.mqtts,
             max_episodes=self.episodes,
             state_update_interval=self.config.state_update_interval,
         )

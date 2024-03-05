@@ -13,7 +13,6 @@ License:
 
 from aiortc import RTCPeerConnection, RTCSessionDescription, RTCConfiguration, RTCIceServer
 import asyncio
-from collections import deque
 from datetime import datetime
 import json
 import requests
@@ -31,6 +30,7 @@ from gi.repository import GstWebRTC
 from apps.app import GstWebRTCAppConfig
 from apps.ahoyapp.app import AhoyApp
 from control.agent import Agent
+from message.client import MqttConfig, MqttPair, MqttPublisher, MqttSubscriber
 from network.controller import NetworkController
 from utils.base import LOGGER, wait_for_condition, async_wait_for_condition
 from utils.gst import stats_to_dict
@@ -47,7 +47,8 @@ class AhoyConnector:
     :param str feed_name: Feed name for the connection.
     :param str signalling_channel_name: Name of the signalling channel.
     :param str stats_channel_name: Name of the stats channel.
-    :param float stats_update_interval: Interval for requesting/receiving new webrtc stats.
+    :param MqttConfig mqtt_config: Configuration for the MQTT client.
+    :param NetworkController network_controller: Network controller that optionally controls the network rules. Nullable.
     """
 
     def __init__(
@@ -59,7 +60,7 @@ class AhoyConnector:
         feed_name: str = "gstreamerwebrtcapp",
         signalling_channel_name: str = "control",
         stats_channel_name: str = "telemetry",
-        stats_update_interval: float = 1.0,
+        mqtt_config: MqttConfig = MqttConfig(),
         network_controller: NetworkController | None = None,
     ):
         self.server = server
@@ -81,9 +82,14 @@ class AhoyConnector:
 
         self.agent = agent
         self.agent_thread = None
-        self.ahoy_stats = deque(maxlen=10000)
-        self.webrtcbin_stats = deque(maxlen=10000)
-        self.stats_update_interval = stats_update_interval
+        self.mqtt_config = mqtt_config
+        if self.agent is not None:
+            self.agent.mqtt_config = mqtt_config
+        self.mqtts = MqttPair(
+            publisher=MqttPublisher(self.mqtt_config),
+            subscriber=MqttSubscriber(self.mqtt_config),
+        )
+        self.mqtts_threads = None
         self.network_controller = network_controller
 
         self.is_running = False
@@ -321,13 +327,8 @@ class AhoyConnector:
                     stats[stat_name] = stats_to_dict(stat_value.to_string())
         else:
             LOGGER.error(f"ERROR: no stats to save...")
-        # write only stats that are received after RTP is set up
-        if self.agent is not None:
-            # if agent is attached, push stats to its controller
-            self.agent.controller.push_observation(stats)
-        else:
-            # if no agent just push stats to the internal queue
-            self.webrtcbin_stats.append(stats)
+
+        self.mqtts.publisher.publish(self.mqtt_config.topics.stats, json.dumps(stats))
 
     async def handle_ice_connection(self) -> None:
         LOGGER.info(f"OK: ICE CONNECTION HANDLER IS ON -- ready to check for ICE connection state")
@@ -351,10 +352,41 @@ class AhoyConnector:
     async def handle_webrtcbin_stats(self) -> None:
         LOGGER.info(f"OK: WEBRTCBIN STATS HANDLER IS ON -- ready to check for stats")
         while self.is_running:
-            await asyncio.sleep(self.stats_update_interval)
+            await asyncio.sleep(0.1)
             promise = Gst.Promise.new_with_change_func(self._on_get_webrtcbin_stats, None, None)
             self._app.webrtcbin.emit('get-stats', None, promise)
         LOGGER.info(f"OK: WEBRTCBIN STATS HANDLER IS OFF!")
+
+    async def handle_actions(self) -> None:
+        LOGGER.info(f"OK: ACTIONS HANDLER IS ON -- ready to pick and apply actions")
+        while self.is_running:
+            action_msg = await self.mqtts.subscriber.message_queues[self.mqtt_config.topics.actions].get()
+            msg = json.loads(action_msg.msg)
+            if self._app is not None and len(msg) > 0:
+                for action in msg:
+                    if msg.get(action) is None:
+                        LOGGER.error(f"ERROR: Action {action} has no value!")
+                        continue
+                    else:
+                        match action:
+                            case "bitrate":
+                                # add 10% policy: if bitrate difference is less than 10% then don't change it
+                                if abs(self._app.bitrate - msg[action]) / self._app.bitrate > 0.1:
+                                    self._app.set_bitrate(msg[action])
+                            case "resolution":
+                                self._app.set_resolution(msg[action])
+                            case "framerate":
+                                self._app.set_framerate(msg[action])
+                            case _:
+                                LOGGER.error(f"ERROR: Unknown action in the message: {msg}")
+        LOGGER.info(f"OK: ACTION HANDLER IS OFF!")
+
+    async def handle_bandwidth_estimations(self) -> None:
+        LOGGER.info(f"OK: BANDWIDTH ESTIMATIONS HANDLER IS ON -- ready to publish bandwidth estimations")
+        while self.is_running:
+            gcc_bw = await self._app.gcc_estimated_bitrates.get()
+            self.mqtts.publisher.publish(self.mqtt_config.topics.gcc, str(gcc_bw))
+        LOGGER.info(f"OK: BANDWIDTH ESTIMATIONS HANDLER IS OFF!")
 
     async def webrtc_coro(self) -> None:
         while not (self._app and self._app.is_running):
@@ -363,17 +395,22 @@ class AhoyConnector:
         tasks = []
         try:
             LOGGER.info(f"OK: main webrtc coroutine has been started!")
+            self.mqtts_threads = [
+                threading.Thread(target=self.mqtts.publisher.run, daemon=True).start(),
+                threading.Thread(target=self.mqtts.subscriber.run, daemon=True).start(),
+            ]
+            self.mqtts.subscriber.subscribe([self.mqtt_config.topics.actions])
             ######################################## TASKS ########################################
             signalling_task = asyncio.create_task(self.handle_ice_connection())
             pipeline_task = asyncio.create_task(self._app.handle_pipeline())
             webrtcbin_stats_task = asyncio.create_task(self.handle_webrtcbin_stats())
-            tasks = [signalling_task, pipeline_task, webrtcbin_stats_task]
+            actions_task = asyncio.create_task(self.handle_actions())
+            be_task = asyncio.create_task(self.handle_bandwidth_estimations())
+            tasks = [signalling_task, pipeline_task, webrtcbin_stats_task, actions_task, be_task]
             if self.agent is not None:
-                # start agent's controller and agent's thread
-                controller_task = asyncio.create_task(self.agent.controller.handle_actions(self._app))
+                # start agents thread
                 self.agent_thread = threading.Thread(target=self.agent.run, args=(True,), daemon=True)
                 self.agent_thread.start()
-                tasks.append(controller_task)
             if self.network_controller is not None:
                 # start network controller's task
                 network_controller_task = asyncio.create_task(self.network_controller.update_network_rule())
@@ -395,6 +432,11 @@ class AhoyConnector:
                 if self.agent_thread is not None:
                     self.agent.stop()
                     self.agent_thread.join()
+                self.mqtts.publisher.stop()
+                self.mqtts.subscriber.stop()
+                for t in self.mqtts_threads:
+                    if t:
+                        t.join()
                 self._app = None
                 LOGGER.info("OK: main webrtc coroutine is stopped on streamStopRequest, pending...")
                 return await self.webrtc_coro()
@@ -410,6 +452,11 @@ class AhoyConnector:
                 if self.agent_thread is not None:
                     self.agent.stop()
                     self.agent_thread.join()
+                self.mqtts.publisher.stop()
+                self.mqtts.subscriber.stop()
+                for t in self.mqtts_threads:
+                    if t:
+                        t.join()
                 self._app = None
                 LOGGER.error(
                     "ERROR: main webrtc coroutine has been interrupted due to an internal exception, stopping..."
@@ -424,6 +471,11 @@ class AhoyConnector:
             if self.agent_thread is not None:
                 self.agent.stop()
                 self.agent_thread.join()
+            self.mqtts.publisher.stop()
+            self.mqtts.subscriber.stop()
+            for t in self.mqtts_threads:
+                if t:
+                    t.join()
             self._app = None
             LOGGER.error(
                 "ERROR: main webrtc coroutine has been unexpectedly interrupted due to an exception:"
