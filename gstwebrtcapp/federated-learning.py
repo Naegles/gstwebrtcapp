@@ -9,10 +9,8 @@ import asyncio
 import aioprocessing
 from aioprocessing import AioProcess, AioManager
 from apps.app import GstWebRTCAppConfig
-from apps.ahoyapp.connector import AhoyConnector
-from apps.pipelines import DEFAULT_BIN_CUDA_PIPELINE, DEFAULT_SINK_PIPELINE
+from apps.pipelines import DEFAULT_SINK_PIPELINE
 from apps.sinkapp.connector import SinkConnector
-from control.controller import Controller
 from control.drl.agent import FedAgent
 from control.drl.config import FedConfig
 from control.drl.mdp import ViewerMDP
@@ -21,7 +19,6 @@ from message.broker import MosquittoBroker
 from message.client import MqttConfig
 from network.controller import NetworkController
 from utils.base import LOGGER
-from apps.pipelines import DEFAULT_H265_IN_WEBRTCBIN_H264_OUT_PIPELINE
 
 try:
     import uvloop
@@ -101,7 +98,6 @@ async def test_fed(feed_name, result_queue, update_queue, update_freq, isLogging
                 save_log_path="./fedLogs",
                 verbose=verbosity,
             ),
-            controller=Controller(),
             mdp=ViewerMDP(
                 reward_function_name="qoe_fed",
                 episode_length=episode_length,
@@ -114,11 +110,14 @@ async def test_fed(feed_name, result_queue, update_queue, update_freq, isLogging
             mqtt_config = mqtt_cfg,
         )
 
+        network_controller = NetworkController(gt_bandwidth=10.0, interval=10.0)
+        network_controller.generate_rules(100, [0.7, 0.2, 0.1])
+
         conn = SinkConnector(
             pipeline_config=app_cfg,
             agent=agent,
             mqtt_config=mqtt_cfg,
-            NetworkController=NetworkController(),
+            NetworkController=network_controller
         )
 
         await conn.connect_coro()

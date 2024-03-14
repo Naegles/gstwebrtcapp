@@ -266,7 +266,7 @@ class DrlManager:
 
 
 class FedManager:
-    """
+        """
     A manager for preprocessing, running and overall controlling of DRL training/evaluation process, namely it:
         1) instantiates a Gymnasium environment,\n
         2) configures SB3 DRL model according to the given hyperparameters and configuration settings,\n
@@ -274,19 +274,23 @@ class FedManager:
         4) performs a training or evaluation process for the DRL model using SB3 backend.\n
 
     :param config: DRL model params, look into ``control/drl/config.py``.
-    :param controller: The Controller instance, look into ``control/controller.py``.
     :param mdp: The MDP instance, look into ``control/drl/mdp.py``.
+    :param mqtts: MQTT instances`.
     """
 
     MAX_EPISODES = 1e9
 
-    def __init__(self, config: FedConfig, controller: Controller, mdp: MDP):
+    def __init__(self, config: DrlConfig, mdp: MDP, mqtts: MqttPair):
         self.config = config
-        self.controller = controller
         self.mdp = mdp
+        self.mqtts = mqtts
+
         self._setup()
 
     def _setup(self) -> None:
+        # set mqqts for the mdp
+        self.mdp.mqtts = self.mqtts
+
         # set paths
         self.log_path, self.model_path = self._set_save_paths(self.config.save_log_path, self.config.save_model_path)
 
@@ -318,6 +322,7 @@ class FedManager:
         self.env = FedEnv(
             controller=self.controller,
             mdp=self.mdp,
+            mqtts=self.mqtts,
             max_episodes=self.episodes,
             state_update_interval=self.config.state_update_interval,
         )
@@ -417,7 +422,7 @@ class FedManager:
             total_timesteps=self.total_timesteps,
             reset_num_timesteps=self.is_reset_timesteps,
             callback=self.callbacks,
-        )           
+        )
 
     def eval(self, eval_callback: DrlEvaluatingCallback | str | None = "default") -> None:
         """evaluate the model"""

@@ -192,17 +192,20 @@ class QoeFed(RewardFunction):
         super().calculate_reward(states)
 
         # 1. rate: 0...0.2
-        reward_rate = np.log((np.exp(1) - 1) * (self.state["rxRate"]) + 1)
+        reward_rate = np.log((np.exp(1) - 1) * (self.state["rxGoodput"]) + 1)
         reward_rate *= 0.2
 
         # 2. rtt: 0...0.2
         # 2.1. mean for the last N states - current rtt
         # calculate mean rtt for the last states except the current one
-        fraction_rtt = get_list_average(self.state["fractionRtt"])
-        sub_reward_avg_curr_diff_rtt = self.state["rttMean"] - fraction_rtt
+        rtt_sum = 0.0
+        for i in range(len(states) - 1):
+            rtt_sum += states[i]["fractionRtt"]
+        rtt_avg = rtt_sum / (len(states) - 1) if len(states) > 1 else self.state["fractionRtt"]
+        sub_reward_avg_curr_diff_rtt = rtt_avg - self.state["fractionRtt"]
         # 2.2. prev - current rtt
         sub_reward_prev_curr_diff_rtt = 2 * (
-            get_list_average(self.prev_state["fractionRtt"]) - fraction_rtt if self.prev_state is not None else 0.0
+            self.prev_state["fractionRtt"] - self.state["fractionRtt"] if self.prev_state is not None else 0.0
         )
         # final
         sub_sum_rtt = sub_reward_avg_curr_diff_rtt + sub_reward_prev_curr_diff_rtt
@@ -214,33 +217,28 @@ class QoeFed(RewardFunction):
 
         # 3. plr: 0...0.2
         # plr is not so often but very deadly, so penalize more. Set 20% to be the most critical
-        fraction_loss_rate = get_list_average(self.state["fractionLossRate"])
-        reward_plr = max(0, 1 - 5 * fraction_loss_rate)
+        reward_plr = max(0, 1 - 5 * self.state["fractionLossRate"])
         reward_plr *= 0.2
 
         # 4. jitter: 0...0.1
         # max 250 ms, more than that is very bad, 10 ms jitter is considered to be acceptable
-        jitter = max(self.state["interarrivalRttJitter"])
-        thresholded_jitter = max(0, jitter - 0.01)
+        thresholded_jitter = max(0, self.state["interarrivalRttJitter"] - 0.01)
         reward_jitter = max(0, 0.5 - np.sqrt(thresholded_jitter))
         reward_jitter *= 0.2
 
         # 5. smooth: take rate of change: 0...0.1
-        rx_rate_prev = get_list_average(self.prev_state["rxGoodput"]) if self.prev_state is not None else 0.0
-        rx_rate = get_list_average(self.state["rxGoodput"])
-        rate_of_change = abs(rx_rate - rx_rate_prev)
+        rate_prev = self.prev_state["rxGoodput"] if self.prev_state is not None else 0.0
+        rate_of_change = abs(self.state["rxGoodput"] - rate_prev)
         # don't penalize if bitrate changes less than 10% or if it's the first state
-        reward_smooth = 1 if rate_of_change <= 0.1 or rx_rate_prev == 0.0 else 1 - rate_of_change
+        reward_smooth = 1 if rate_of_change <= 0.1 or rate_prev == 0.0 else 1 - rate_of_change
         reward_smooth *= 0.1
 
         # 6. pli rate should not be higher than 0.1%: 0..0.05
-        pli_rate = get_list_average(self.state["fractionPliRate"])
-        reward_pli = max(0, 1 - (pli_rate * 1000))
+        reward_pli = max(0, 1 - (self.state["fractionPliRate"] * 1000))
         reward_pli *= 0.05
 
         # 7. nack rate should not be higher than 5%: 0..0.05
-        nack_rate = get_list_average(self.state["fractionNackRate"])
-        reward_nack = max(0, 1 - (nack_rate * 20))
+        reward_nack = max(0, 1 - (self.state["fractionNackRate"] * 20))
         reward_nack *= 0.05
 
         # final
@@ -253,14 +251,11 @@ class QoeFed(RewardFunction):
         # 4. if jitter > 250ms then reward = 0
         # 5. if plir > 1% then reward = 0
         if (
-            fraction_loss_rate > 0.2
-            or fraction_rtt > 0.5
-            or (
-                get_list_average(self.state["txGoodput"]) > 0
-                and rx_rate / get_list_average(self.state["txGoodput"]) < 0.2
-            )
-            or jitter > 0.25
-            or pli_rate > 0.01
+            self.state["fractionLossRate"] > 0.2
+            or self.state["fractionRtt"] > 0.5
+            or (self.state["txGoodput"] > 0 and self.state["rxGoodput"] / self.state["txGoodput"] < 0.2)
+            or self.state["interarrivalRttJitter"] > 0.25
+            or self.state["fractionPliRate"] > 0.01
         ):
             reward = 0.0
 
@@ -286,7 +281,7 @@ class RewardFunctionFactory:
         "qoe_paper": QoePaper,
         "qoe_ahoy": QoeAhoy,
         "qoe_fed" : QoeFed,
-        "qoe_ahoy_seq": QoeAhoySeq,
+        "qoe_ahoy_seq": QoeAhoy,
         # add more reward function classes as needed
     }
 
