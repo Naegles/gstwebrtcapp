@@ -266,7 +266,7 @@ class DrlManager:
 
 
 class FedManager:
-        """
+    """
     A manager for preprocessing, running and overall controlling of DRL training/evaluation process, namely it:
         1) instantiates a Gymnasium environment,\n
         2) configures SB3 DRL model according to the given hyperparameters and configuration settings,\n

@@ -51,18 +51,19 @@ class DrlAgent(Agent):
 class FedAgent(Agent):
     def __init__(
         self,
-        controller: Controller,
         config: FedConfig,
         mdp: MDP,
+        mqtt_config: MqttConfig,
         warmup: float = 10.0,
     ) -> None:
-        super().__init__(controller)
+        super().__init__(mqtt_config)
         self.warmup = warmup
         self.type = AgentType.DRL
 
         self.manager = FedManager(config, controller, mdp)
 
     def run(self, is_load_last_model: bool = False) -> None:
+        super().run()
         time.sleep(self.warmup)
         LOGGER.info(f"INFO: DRL Agent warmup {self.warmup} sec is finished, starting...")
 
@@ -75,5 +76,12 @@ class FedAgent(Agent):
             raise Exception(f"Unknown DRL mode {self.manager.config.mode}")
 
     def stop(self) -> None:
+        super().stop()
         LOGGER.info("INFO: stopping DRL agent...")
         self.manager.stop()
+
+    def get_weights(self):
+        return self.manager.get_weights()
+
+    def set_weights(self, weights):
+        self.manager.set_weights(weights)
