@@ -11,10 +11,15 @@ from aioprocessing import AioProcess, AioManager
 from apps.app import GstWebRTCAppConfig
 from apps.ahoyapp.connector import AhoyConnector
 from apps.pipelines import DEFAULT_BIN_CUDA_PIPELINE, DEFAULT_SINK_PIPELINE
+from apps.sinkapp.connector import SinkConnector
 from control.controller import Controller
 from control.drl.agent import FedAgent
 from control.drl.config import FedConfig
 from control.drl.mdp import ViewerMDP
+from control.drl.mdp import ViewerSeqMDP
+from message.broker import MosquittoBroker
+from message.client import MqttConfig
+from network.controller import NetworkController
 from utils.base import LOGGER
 from apps.pipelines import DEFAULT_H265_IN_WEBRTCBIN_H264_OUT_PIPELINE
 
@@ -25,7 +30,7 @@ except ImportError:
 
 AHOY_DIRECTOR_URL = "https://devdirex.wavelab.addix.net/api/v2/feed/attach/"
 API_KEY = "1f3ca3c3c6580a07fca62e18c2d6f325802b681a"
-VIDEO_SOURCE = "rtsp://admin:@10.10.10.125:554/h265Preview_01_main"
+VIDEO_SOURCE = "rtsp://admin:@kiel.ins.informatik.uni-kiel.de:554/h264Preview_01_sub"
 
 def average_weights(weights_list):
     weightResult = {}
@@ -56,11 +61,18 @@ def test_fed_start(feed_name, result_queue, update_queue, update_freq, isLogging
 async def test_fed(feed_name, result_queue, update_queue, update_freq, isLogging):
     # run it to test drl agent
     try:
+        mqtt_cfg = MqttConfig(id="", broker_port=1884)
         episodes = 200
         episode_length = 50
         stats_update_interval = 1.0
 
-        app_cfg = GstWebRTCAppConfig(video_url=VIDEO_SOURCE, pipeline_str=DEFAULT_H265_IN_WEBRTCBIN_H264_OUT_PIPELINE)
+        app_cfg = GstWebRTCAppConfig(
+            video_url=VIDEO_SOURCE, 
+            pipeline_str=DEFAULT_SINK_PIPELINE, 
+            codec="h264", 
+            bitrate=2000, 
+            gcc_settings={"min-bitrate": 400000, "max-bitrate": 10000000},
+            )
         
         callbacksToUse = ['print_step', 'federated']
         verbosity = 1
@@ -71,7 +83,7 @@ async def test_fed(feed_name, result_queue, update_queue, update_freq, isLogging
         agent = FedAgent(
             config=FedConfig(
                 mode="train",
-                model_name="ppo",
+                model_name="sac",
                 episodes=episodes,
                 episode_length=episode_length,
                 state_update_interval=stats_update_interval,
@@ -93,21 +105,23 @@ async def test_fed(feed_name, result_queue, update_queue, update_freq, isLogging
             mdp=ViewerMDP(
                 reward_function_name="qoe_fed",
                 episode_length=episode_length,
-                constants={"MAX_BITRATE_STREAM_MBPS": 10},  # Ahoy fixes the max bitrate to 10 Mbps in SDP
+                constants={
+                    "MAX_BITRATE_STREAM_MBPS": 10,
+                    "MAX_BANDWIDTH_MBPS": app_cfg.gcc_settings["max-bitrate"] / 1000000,
+                    "MIN_BANDWIDTH_MBPS": app_cfg.gcc_settings["min-bitrate"] / 1000000,
+                },
             ),
+            mqtt_config = mqtt_cfg,
         )
 
-        conn = AhoyConnector(
+        conn = SinkConnector(
             pipeline_config=app_cfg,
             agent=agent,
-            server=AHOY_DIRECTOR_URL,
-            api_key=API_KEY,
-            feed_name=feed_name,
-            stats_update_interval=stats_update_interval,
+            mqtt_config=mqtt_cfg,
+            NetworkController=NetworkController(),
         )
 
         await conn.connect_coro()
-        await conn.webrtc_coro()
 
     except KeyboardInterrupt:
         LOGGER.info("KeyboardInterrupt received, exiting...")
@@ -128,6 +142,7 @@ def update_loop(num_workers, result_queue, update_queue):
         averaged_weights = average_weights(weights)
         for i in range(num_workers):
             update_queue.put(averaged_weights)
+            
 
 if __name__ == "__main__":
     # Create n federated workers
