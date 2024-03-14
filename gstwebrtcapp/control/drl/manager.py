@@ -320,7 +320,6 @@ class FedManager:
 
         # initialize env
         self.env = FedEnv(
-            controller=self.controller,
             mdp=self.mdp,
             mqtts=self.mqtts,
             max_episodes=self.episodes,

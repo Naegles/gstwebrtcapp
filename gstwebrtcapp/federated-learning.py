@@ -117,10 +117,10 @@ async def test_fed(feed_name, result_queue, update_queue, update_freq, isLogging
             pipeline_config=app_cfg,
             agent=agent,
             mqtt_config=mqtt_cfg,
-            NetworkController=network_controller
+            network_controller=None,
         )
 
-        await conn.connect_coro()
+        await conn.webrtc_coro()
 
     except KeyboardInterrupt:
         LOGGER.info("KeyboardInterrupt received, exiting...")
@@ -145,7 +145,7 @@ def update_loop(num_workers, result_queue, update_queue):
 
 if __name__ == "__main__":
     # Create n federated workers
-    num_workers = 2
+    num_workers = 1
     with aioprocessing.AioManager() as manager:
         result_queue = manager.AioQueue(maxsize=num_workers)
         update_queue = manager.AioQueue(maxsize=num_workers)
