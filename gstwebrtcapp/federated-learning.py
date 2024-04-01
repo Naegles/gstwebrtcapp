@@ -99,7 +99,7 @@ async def test_fed(feed_name, result_queue, update_queue, update_freq, isLogging
                 verbose=verbosity,
             ),
             mdp=ViewerMDP(
-                reward_function_name="qoe_fed",
+                reward_function_name="qoe_ahoy",
                 episode_length=episode_length,
                 constants={
                     "MAX_BITRATE_STREAM_MBPS": 10,
