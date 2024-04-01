@@ -28,7 +28,8 @@ except ImportError:
 
 AHOY_DIRECTOR_URL = "https://devdirex.wavelab.addix.net/api/v2/feed/attach/"
 API_KEY = "1f3ca3c3c6580a07fca62e18c2d6f325802b681a"
-VIDEO_SOURCE = "rtsp://192.168.178.30:57883"
+VIDEO_SOURCE = "rtsp://192.168.178.30"
+PORT_START = 57883
 
 def average_weights(weights_list):
     weightResult = {}
@@ -40,33 +41,34 @@ def average_weights(weights_list):
 def create_workers(num_workers, result_queue, update_queue, update_freq):
     workers = []
     for i in range(num_workers):
+        port = PORT_START + i
         if i == 0:
-            p = aioprocessing.AioProcess(target=test_fed_start, args=(f"feed_{i}", i, result_queue, update_queue, update_freq, True))
+            p = aioprocessing.AioProcess(target=test_fed_start, args=(f"feed_{i}", i, result_queue, update_queue, update_freq, True, port))
             p.start()
             workers.append(p)
         else:
-            p = aioprocessing.AioProcess(target=test_fed_start, args=(f"feed_{i}", i, result_queue, update_queue, update_freq, False))
+            p = aioprocessing.AioProcess(target=test_fed_start, args=(f"feed_{i}", i, result_queue, update_queue, update_freq, False, port))
             p.start()
             workers.append(p)
     return workers
 
 
-def test_fed_start(feed_name, seed, result_queue, update_queue, update_freq, isLogging):
+def test_fed_start(feed_name, seed, result_queue, update_queue, update_freq, isLogging, port):
     if uvloop is not None:
         asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-    asyncio.run(test_fed(feed_name, seed, result_queue, update_queue, update_freq, isLogging))
+    asyncio.run(test_fed(feed_name, seed, result_queue, update_queue, update_freq, isLogging, port))
 
-async def test_fed(feed_name, seed, result_queue, update_queue, update_freq, isLogging):
+async def test_fed(feed_name, seed, result_queue, update_queue, update_freq, isLogging, port):
     # run it to test drl agent
     try:
         mqtt_cfg = MqttConfig(id="", broker_port=1883)
-        episodes = 2000
+        episodes = 100
         episode_length = 50
         stats_update_interval = 2.0
 
         app_cfg = GstWebRTCAppConfig( 
             pipeline_str=DEFAULT_SINK_PIPELINE, 
-            video_url=VIDEO_SOURCE,
+            video_url=VIDEO_SOURCE + ':' + str(port),
             codec="h264", 
             bitrate=2000, 
             gcc_settings={"min-bitrate": 400000, "max-bitrate": 10000000},
@@ -103,7 +105,7 @@ async def test_fed(feed_name, seed, result_queue, update_queue, update_freq, isL
                 verbose=verbosity,
             ),
             mdp=ViewerMDP(
-                reward_function_name="qoe_fed",
+                reward_function_name="qoe_ahoy",
                 episode_length=episode_length,
                 constants={
                     "MAX_BITRATE_STREAM_MBPS": 10,
@@ -176,7 +178,7 @@ async def test_fed2(feed_name, seed, result_queue, update_queue, update_freq, is
                 verbose=verbosity,
             ),
             mdp=ViewerMDP(
-                reward_function_name="qoe_fed",
+                reward_function_name="qoe_ahoy",
                 episode_length=episode_length,
                 constants={
                     "MAX_BITRATE_STREAM_MBPS": 10,
@@ -230,13 +232,9 @@ if __name__ == "__main__":
     with aioprocessing.AioManager() as manager:
         result_queue = manager.JoinableQueue(maxsize=num_workers)
         update_queue = manager.JoinableQueue(maxsize=num_workers)
-        # workers = create_workers(num_workers, result_queue, update_queue, update_freq=10)
+        workers = create_workers(num_workers, result_queue, update_queue, update_freq=10)
         # Start the weight update loop
-        # update_loop(num_workers, result_queue, update_queue)  
-    
-    if uvloop is not None:
-        asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-    asyncio.run(test_fed2("test", 1, result_queue, update_queue, 2, True))
+        update_loop(num_workers, result_queue, update_queue)  
     
     
     
