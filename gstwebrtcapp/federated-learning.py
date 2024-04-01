@@ -7,8 +7,8 @@ Author:
 
 import time
 import asyncio
-import aioprocessing
-from aioprocessing import AioProcess, AioManager
+import multiprocessing
+from multiprocessing import Process, Manager
 from apps.app import GstWebRTCAppConfig
 from apps.pipelines import DEFAULT_SINK_PIPELINE
 from apps.sinkapp.connector import SinkConnector
@@ -43,11 +43,11 @@ def create_workers(num_workers, result_queue, update_queue, update_freq):
     for i in range(num_workers):
         port = PORT_START + i
         if i == 0:
-            p = aioprocessing.AioProcess(target=test_fed_start, args=(f"feed_{i}", i, result_queue, update_queue, update_freq, True, port))
+            p = Process(target=test_fed_start, args=(f"feed_{i}", i, result_queue, update_queue, update_freq, True))
             p.start()
             workers.append(p)
         else:
-            p = aioprocessing.AioProcess(target=test_fed_start, args=(f"feed_{i}", i, result_queue, update_queue, update_freq, False, port))
+            p = Process(target=test_fed_start, args=(f"feed_{i}", i, result_queue, update_queue, update_freq, False))
             p.start()
             workers.append(p)
     return workers
@@ -207,34 +207,31 @@ async def test_fed2(feed_name, seed, result_queue, update_queue, update_freq, is
 
 def update_loop(num_workers, result_queue, update_queue):
     while True:
-        # Wait until the result queue is full
-        while not result_queue.full():
-            pass
-
         # Get all the weights from the result queue
         weights = []
         for i in range(num_workers):
-            weights.append(result_queue.get())
-        for i in range(num_workers):
-            result_queue.task_done()
-        result_queue.join()
-    
+            if result_queue.empty():
+                weights.append(result_queue.get(timeout=300))
+
         # Average the weights and fill the update queue with the averaged weights
         averaged_weights = average_weights(weights)
         for i in range(num_workers):
             update_queue.put(averaged_weights)
-        update_queue.join
             
 
 if __name__ == "__main__":
     # Create n federated workers
     num_workers = 2
-    with aioprocessing.AioManager() as manager:
-        result_queue = manager.JoinableQueue(maxsize=num_workers)
-        update_queue = manager.JoinableQueue(maxsize=num_workers)
-        workers = create_workers(num_workers, result_queue, update_queue, update_freq=10)
+    with Manager() as manager:
+        result_queue = manager.Queue(maxsize=num_workers)
+        update_queue = manager.Queue(maxsize=num_workers)
+        # workers = create_workers(num_workers, result_queue, update_queue, update_freq=10)
         # Start the weight update loop
-        update_loop(num_workers, result_queue, update_queue)  
+        # update_loop(num_workers, result_queue, update_queue)  
+    
+    if uvloop is not None:
+        asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+    asyncio.run(test_fed("test", 1, result_queue, update_queue, 2, True))
     
     
     
