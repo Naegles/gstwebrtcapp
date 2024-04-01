@@ -231,13 +231,10 @@ if __name__ == "__main__":
     with Manager() as manager:
         result_queue = manager.Queue(maxsize=num_workers)
         update_queue = manager.Queue(maxsize=num_workers)
-        # workers = create_workers(num_workers, result_queue, update_queue, update_freq=10)
+        workers = create_workers(num_workers, result_queue, update_queue, update_freq=10)
         # Start the weight update loop
-        # update_loop(num_workers, result_queue, update_queue)  
-    
-    if uvloop is not None:
-        asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-    asyncio.run(test_fed("test", 1, result_queue, update_queue, 2, True))
+        update_loop(num_workers, result_queue, update_queue)  
+
     
     
     
