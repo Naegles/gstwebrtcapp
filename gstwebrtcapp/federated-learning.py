@@ -5,7 +5,6 @@ Author:
     - Nikita Smirnov <nsm@informatik.uni-kiel.de>
 '''
 
-import time
 import asyncio
 from multiprocessing import Process, Manager, Queue
 from aioprocessing import AioManager
@@ -17,7 +16,6 @@ from control.drl.agent import FedAgent
 from control.drl.config import FedConfig
 from control.drl.mdp import ViewerMDP
 from control.drl.mdp import ViewerSeqMDP
-from message.broker import MosquittoBroker
 from message.client import MqttConfig
 from network.controller import NetworkController
 from utils.base import LOGGER
@@ -105,8 +103,8 @@ async def test_fed(feed_name, seed, result_queue, update_queue, update_freq, isL
                 save_log_path="./fedLogs",
                 verbose=verbosity,
             ),
-            mdp=ViewerMDP(
-                reward_function_name="qoe_ahoy",
+            mdp=ViewerSeqMDP(
+                reward_function_name="qoe_ahoy_seq",
                 episode_length=episode_length,
                 constants={
                     "MAX_BITRATE_STREAM_MBPS": 10,
