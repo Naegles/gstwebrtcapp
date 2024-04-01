@@ -253,21 +253,21 @@ class FedWeightUpdateCallback(BaseCallback):
         if(self.num_timesteps % self.update_freq == 0):
             # Get current weights and put them in the result queue
             weights = self.get_weights()
-            self.result_queue.put(weights)
-            self.result_queue.join()
-            
-            # Wait for updated weights to appear in update_queue, then update the model with them
-            while not self.update_queue.full():
-                pass
 
-            averaged_weights = self.update_queue.get()
-            self.set_weights(averaged_weights)
-            self.update_queue.task_done()
+            try:
+                self.result_queue.put(weights, timeout=30)
+            except self.result_queue.Full:
+                LOGGER.info("ERROR: Timeout while waiting for result queue to be free")
             
+            try: 
+                averaged_weights = self.update_queue.get(timeout=30)
+                self.set_weights(averaged_weights)
+            except self.update_queue.Empty:
+                LOGGER.info("ERROR: Timeout while waiting for weight update")
+
             # Increment the number of weight updates
             LOGGER.info(f"OK: Weights Updated\n")
             self.training_env.env_method("increment_weightUpdates")
-            self.update_queue.join()
         return True
     
     def get_weights(self):
