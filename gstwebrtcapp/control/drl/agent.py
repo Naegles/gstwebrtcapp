@@ -17,7 +17,7 @@ class DrlAgent(Agent):
         drl_config: DrlConfig,
         mdp: MDP,
         mqtt_config: MqttConfig,
-        warmup: float = 60.0,
+        warmup: float = 30.0,
     ) -> None:
         super().__init__(mqtt_config)
         self.warmup = warmup
@@ -54,12 +54,11 @@ class FedAgent(Agent):
         config: FedConfig,
         mdp: MDP,
         mqtt_config: MqttConfig,
-        warmup: float = 60.0,
+        warmup: float = 30.0,
     ) -> None:
         super().__init__(mqtt_config)
         self.warmup = warmup
         self.type = AgentType.DRL
-
         self.manager = FedManager(config, mdp, self.mqtts)
 
     def run(self, is_load_last_model: bool = False) -> None:

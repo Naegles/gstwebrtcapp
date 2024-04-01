@@ -360,7 +360,7 @@ class AhoyConnector:
     async def handle_actions(self) -> None:
         LOGGER.info(f"OK: ACTIONS HANDLER IS ON -- ready to pick and apply actions")
         while self.is_running:
-            action_msg = await self.mqtts.subscriber.message_queues[self.mqtt_config.topics.actions].get()
+            action_msg = await self.mqtts.subscriber.message_queues[self.mqtt_config.topics.actions + "_" + self.feed_name].get()
             msg = json.loads(action_msg.msg)
             if self._app is not None and len(msg) > 0:
                 for action in msg:

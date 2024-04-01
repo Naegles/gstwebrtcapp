@@ -65,7 +65,7 @@ class GstWebRTCAppConfig:
     gcc_settings: Dict[str, int] | None = field(default_factory=lambda: DEFAULT_GCC_SETTINGS)
     data_channels_cfgs: List[Dict[str, Any]] = field(default_factory=lambda: [])
     priority: int = 2
-    max_timeout: int = 60
+    max_timeout: int = 200
     is_cuda: bool = False
     is_debug: bool = False
 

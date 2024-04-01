@@ -27,6 +27,7 @@ class MqttConfig:
     username: str | None = None
     password: str | None = None
     is_tls: bool = False
+    feed_name: str = ""
     topics: MqttGstWebrtcAppTopics = field(default_factory=lambda: MqttGstWebrtcAppTopics)
 
 
@@ -44,6 +45,7 @@ class MqttClient(metaclass=ABCMeta):
         config: MqttConfig = MqttConfig(""),
     ) -> None:
         self.id = config.id if config.id else secrets.token_hex(4)
+        self.feed_name = config.feed_name
         self.broker_host = config.broker_host
         self.broker_port = config.broker_port
         self.keepalive = config.keepalive
@@ -51,7 +53,7 @@ class MqttClient(metaclass=ABCMeta):
         self.password = config.password
         self.is_tls = config.is_tls
         self.topics = config.topics
-
+        
         self.message_queue = None
         self.client = None
 
@@ -96,6 +98,7 @@ class MqttPublisher(MqttClient):
 
     def publish(self, topic: str, msg: str) -> None:
         wait_for_condition(lambda: self.is_running, 10)
+        topic = topic + "_" + self.feed_name
         self.client.publish(
             topic,
             json.dumps(
@@ -117,7 +120,8 @@ class MqttSubscriber(MqttClient):
         super().__init__(config)
         self.message_queues: Dict[str, asyncio.Queue] = {}
         for f in fields(self.topics):
-            self.message_queues[getattr(self.topics, f.name)] = asyncio.Queue()
+            topic_name = getattr(self.topics, f.name) + "_" + self.feed_name
+            self.message_queues[topic_name] = asyncio.Queue() 
 
     def on_message(self, _, __, msg) -> None:
         payload = json.loads(msg.payload.decode('utf8'))
@@ -135,11 +139,13 @@ class MqttSubscriber(MqttClient):
     def subscribe(self, topics: List[str]) -> None:
         wait_for_condition(lambda: self.is_running, 10)
         for topic in topics:
+            topic = topic + "_" + self.feed_name
             self.client.subscribe(topic, qos=1)
             self.client.on_message = self.on_message
             LOGGER.info(f"OK: MQTT subscriber {self.id} has successfully subscribed to {topic}")
 
     def get_message(self, topic: str) -> MqttMessage | None:
+        topic = topic + "_" + self.feed_name
         queue = self.message_queues.get(topic, None)
         if queue is None:
             LOGGER.error(f"ERROR: No message queue for topic {topic}")
@@ -148,11 +154,17 @@ class MqttSubscriber(MqttClient):
         return None
 
     def clean_message_queue(self, topic: str) -> None:
+        topic = topic + "_" + self.feed_name 
         queue = self.message_queues.get(topic, None)
         if queue is None:
             LOGGER.error(f"ERROR: No message queue for topic {topic}")
         while not queue.empty():
             _ = queue.get_nowait()
+
+    def is_empty(self, topic: str) -> bool:
+        topic = topic + "_" + self.feed_name
+        return self.message_queues.get(topic, None).empty()
+
 
 
 @dataclass

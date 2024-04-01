@@ -112,7 +112,7 @@ class DrlEnv(Env):
                     obs_list.append(stats_unwrapped)
                 is_collected = (
                     len(obs_list) >= self.mdp.num_observations_for_state
-                    and self.mqtts.subscriber.message_queues[self.mqtts.subscriber.topics.stats].empty()
+                    and self.mqtts.subscriber.is_empty(self.mqtts.subscriber.topics.stats)
                 )
 
         if not self.mdp.is_deliver_all_observations:
@@ -273,7 +273,7 @@ class FedEnv(Env):
                     obs_list.append(stats_unwrapped)
                 is_collected = (
                     len(obs_list) >= self.mdp.num_observations_for_state
-                    and self.mqtts.subscriber.message_queues[self.mqtts.subscriber.topics.stats].empty()
+                    and self.mqtts.subscriber.is_empty(self.mqtts.subscriber.topics.stats)
                 )
 
         if not self.mdp.is_deliver_all_observations:

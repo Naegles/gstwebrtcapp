@@ -20,7 +20,7 @@ class DrlOfflineAgent(Agent):
         drl_offline_config: DrlOfflineConfig,
         mdp: MDP,
         mqtt_config: MqttConfig,
-        warmup: float = 20.0,
+        warmup: float = 30.0,
     ) -> None:
         super().__init__(mqtt_config)
 

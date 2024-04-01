@@ -29,7 +29,7 @@ class DrlConfig:
     episodes: int = 30
     episode_length: int = 512
     state_update_interval: float = 1.0
-    state_max_inactivity_time: float = 60.0
+    state_max_inactivity_time: float = 200.0
     hyperparams_cfg: str | Dict[str, Any] | None = None
     deterministic: bool = False
     callbacks: List[str] | None = None
@@ -64,7 +64,7 @@ class FedConfig:
     episodes: int = 30
     episode_length: int = 512
     state_update_interval: float = 1.0
-    state_max_inactivity_time: float = 60.0
+    state_max_inactivity_time: float = 200.0
     result_queue: Any = None
     update_queue: Any = None
     update_freq: int = 10

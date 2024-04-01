@@ -7,8 +7,9 @@ Author:
 
 import time
 import asyncio
-import multiprocessing
-from multiprocessing import Process, Manager
+from multiprocessing import Process, Manager, Queue
+from aioprocessing import AioManager
+from queue import Empty, Full
 from apps.app import GstWebRTCAppConfig
 from apps.pipelines import DEFAULT_SINK_PIPELINE
 from apps.sinkapp.connector import SinkConnector
@@ -43,11 +44,11 @@ def create_workers(num_workers, result_queue, update_queue, update_freq):
     for i in range(num_workers):
         port = PORT_START + i
         if i == 0:
-            p = Process(target=test_fed_start, args=(f"feed_{i}", i, result_queue, update_queue, update_freq, True))
+            p = Process(target=test_fed_start, args=(f"feed_{i}", i, result_queue, update_queue, update_freq, True, port))
             p.start()
             workers.append(p)
         else:
-            p = Process(target=test_fed_start, args=(f"feed_{i}", i, result_queue, update_queue, update_freq, False))
+            p = Process(target=test_fed_start, args=(f"feed_{i}", i, result_queue, update_queue, update_freq, False, port))
             p.start()
             workers.append(p)
     return workers
@@ -61,7 +62,7 @@ def test_fed_start(feed_name, seed, result_queue, update_queue, update_freq, isL
 async def test_fed(feed_name, seed, result_queue, update_queue, update_freq, isLogging, port):
     # run it to test drl agent
     try:
-        mqtt_cfg = MqttConfig(id="", broker_port=1883)
+        mqtt_cfg = MqttConfig(feed_name=feed_name, broker_port=1883)
         episodes = 100
         episode_length = 50
         stats_update_interval = 2.0
@@ -72,7 +73,7 @@ async def test_fed(feed_name, seed, result_queue, update_queue, update_freq, isL
             codec="h264", 
             bitrate=2000, 
             gcc_settings={"min-bitrate": 400000, "max-bitrate": 10000000},
-            is_debug=True
+            is_debug=False
         )
         
         callbacksToUse = ['print_step', 'federated']
@@ -124,6 +125,7 @@ async def test_fed(feed_name, seed, result_queue, update_queue, update_freq, isL
             agent=agent,
             mqtt_config=mqtt_cfg,
             network_controller=None,
+            feed_name=feed_name
         )
 
         await conn.webrtc_coro()
@@ -132,78 +134,6 @@ async def test_fed(feed_name, seed, result_queue, update_queue, update_freq, isL
         LOGGER.info("KeyboardInterrupt received, exiting...")
         return
 
-async def test_fed2(feed_name, seed, result_queue, update_queue, update_freq, isLogging):
-    # run it to test drl agent
-    try:
-        mqtt_cfg = MqttConfig(id="", broker_port=1883)
-        episodes = 2000
-        episode_length = 50
-        stats_update_interval = 2.0
-
-        app_cfg = GstWebRTCAppConfig( 
-            pipeline_str=DEFAULT_SINK_PIPELINE, 
-            video_url=VIDEO_SOURCE,
-            codec="h264", 
-            bitrate=2000, 
-            gcc_settings={"min-bitrate": 400000, "max-bitrate": 10000000},
-        )
-        
-        callbacksToUse = ['print_step']
-        verbosity = 1
-        if(isLogging):
-            callbacksToUse = ['print_step', 'save_step', 'save_model']
-            verbosity = 2
-
-        agent = FedAgent(
-            config=FedConfig(
-                mode="train",
-                model_name="sac",
-                episodes=episodes,
-                episode_length=episode_length,
-                state_update_interval=stats_update_interval,
-                result_queue=result_queue,
-                update_queue=update_queue,
-                update_freq=update_freq,
-                hyperparams_cfg={
-                    "policy": "MultiInputPolicy",
-                    "batch_size": 128,
-                    "ent_coef": "auto_0.1",
-                    "policy_kwargs": {"log_std_init": -1, "activation_fn": "relu", "net_arch": [256, 256]},
-                    "learning_starts": 10,
-                    "seed" : seed,
-                },
-                callbacks=callbacksToUse,
-                save_model_path="./fedModels",
-                save_log_path="./fedLogs",
-                verbose=verbosity,
-            ),
-            mdp=ViewerMDP(
-                reward_function_name="qoe_ahoy",
-                episode_length=episode_length,
-                constants={
-                    "MAX_BITRATE_STREAM_MBPS": 10,
-                    "MAX_BANDWIDTH_MBPS": app_cfg.gcc_settings["max-bitrate"] / 1000000,
-                    "MIN_BANDWIDTH_MBPS": app_cfg.gcc_settings["min-bitrate"] / 1000000,
-                },
-            ),
-            mqtt_config = mqtt_cfg,
-        )
-
-        network_controller = NetworkController(gt_bandwidth=10.0, interval=10.0)
-        network_controller.generate_rules(100, [0.7, 0.2, 0.1])
-
-        conn = SinkConnector(
-            pipeline_config=app_cfg,
-            agent=agent,
-            mqtt_config=mqtt_cfg,
-            network_controller=None,
-        )
-
-        await conn.webrtc_coro()
-
-    except KeyboardInterrupt:
-        LOGGER.info("KeyboardInterrupt received, exiting...")
-        return
 
 def update_loop(num_workers, result_queue, update_queue):
     while True:
@@ -212,8 +142,9 @@ def update_loop(num_workers, result_queue, update_queue):
         for i in range(num_workers):
                 try:
                     weights.append(result_queue.get(timeout=180))
-                except result_queue.Empty:
+                except Empty:
                     LOGGER.info("ERROR: Timeout while update_loop waiting for weight update from agents")
+                    pass
                     
                 
 
@@ -222,8 +153,9 @@ def update_loop(num_workers, result_queue, update_queue):
         for i in range(num_workers):
             try:
                 update_queue.put(averaged_weights, timeout=30)
-            except update_queue.Full:
-                LOGGER.info("ERROR: Timeout while update_loop waiting for update queue to be free")            
+            except Full:
+                LOGGER.info("ERROR: Timeout while update_loop waiting for update queue to be free") 
+                pass           
 
 if __name__ == "__main__":
     # Create n federated workers
@@ -231,14 +163,10 @@ if __name__ == "__main__":
     with Manager() as manager:
         result_queue = manager.Queue(maxsize=num_workers)
         update_queue = manager.Queue(maxsize=num_workers)
-        # workers = create_workers(num_workers, result_queue, update_queue, update_freq=10)
+        workers = create_workers(num_workers, result_queue, update_queue, update_freq=10)
         # Start the weight update loop
-        # update_loop(num_workers, result_queue, update_queue)  
-    
-    if uvloop is not None:
-        asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-    asyncio.run(test_fed("test", 1, result_queue, update_queue, 2, True))
-    
+        update_loop(num_workers, result_queue, update_queue)  
+        
     
     
     

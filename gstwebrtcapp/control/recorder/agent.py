@@ -63,7 +63,7 @@ class CsvViewerRecorderAgent(Agent):
         time.sleep(self.stats_update_interval)
         time_inactivity_starts = time.time()
         stats = []
-        while not self.mqtts.subscriber.message_queues[self.mqtts.subscriber.topics.stats].empty():
+        while not self.mqtts.subscriber.is_empty(self.mqtts.subscriber.topics.stats):
             gst_stats = self.mqtts.subscriber.get_message(self.mqtts.subscriber.topics.stats)
             if gst_stats is None:
                 if time.time() - time_inactivity_starts > self.max_inactivity_time:

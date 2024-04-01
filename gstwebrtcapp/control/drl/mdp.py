@@ -231,7 +231,7 @@ class ViewerMDP(MDP):
         super().make_state(stats)
         # get gcc bandiwdth
         bws = []
-        while not self.mqtts.subscriber.message_queues[self.mqtts.subscriber.topics.gcc].empty():
+        while not self.mqtts.subscriber.is_empty(self.mqtts.subscriber.topics.gcc):
             msg = self.mqtts.subscriber.get_message(self.mqtts.subscriber.topics.gcc)
             bws.append(float(msg.msg))
         bws = [b / 1e6 for b in bws]
@@ -507,7 +507,7 @@ class ViewerSeqMDP(MDP):
         super().make_state(stats)
         # get gcc bandiwdth
         bws = []
-        while not self.mqtts.subscriber.message_queues[self.mqtts.subscriber.topics.gcc].empty():
+        while not self.mqtts.subscriber.is_empty(self.mqtts.subscriber.topics.gcc):
             msg = self.mqtts.subscriber.get_message(self.mqtts.subscriber.topics.gcc)
             bws.append(float(msg.msg))
         bws = [b / 1e6 for b in bws]

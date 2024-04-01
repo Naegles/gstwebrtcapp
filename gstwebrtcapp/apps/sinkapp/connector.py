@@ -38,7 +38,8 @@ class SinkConnector:
         pipeline_config: GstWebRTCAppConfig = GstWebRTCAppConfig(),
         agent: Agent | None = None,
         mqtt_config: MqttConfig = MqttConfig(),
-        network_controller: NetworkController | None = None,
+        network_controller: NetworkController | None = None, 
+        feed_name: str = ""
     ):
         self.pipeline_config = pipeline_config
         if 'signaller::uri' in self.pipeline_config.pipeline_str:
@@ -61,6 +62,8 @@ class SinkConnector:
         )
         self.mqtts_threads = None
         self.network_controller = network_controller
+
+        self.feed_name = feed_name
 
         self._app = None
         self.webrtcbin_stats = deque(maxlen=10000)
@@ -161,7 +164,7 @@ class SinkConnector:
     async def handle_actions(self) -> None:
         LOGGER.info(f"OK: ACTIONS HANDLER IS ON -- ready to pick and apply actions")
         while self.is_running:
-            action_msg = await self.mqtts.subscriber.message_queues[self.mqtt_config.topics.actions].get()
+            action_msg = await self.mqtts.subscriber.message_queues[self.mqtt_config.topics.actions + "_" + self.feed_name].get()
             msg = json.loads(action_msg.msg)
             if self._app is not None and len(msg) > 0:
                 for action in msg:

@@ -7,6 +7,7 @@ import os
 from stable_baselines3.common.callbacks import BaseCallback, CheckpointCallback
 from stable_baselines3.common.vec_env import VecEnv
 from control.drl.env import FedEnv
+from queue import Empty, Full
 
 from utils.base import LOGGER
 
@@ -256,14 +257,16 @@ class FedWeightUpdateCallback(BaseCallback):
 
             try:
                 self.result_queue.put(weights, timeout=30)
-            except self.result_queue.Full:
+            except Full:
                 LOGGER.info("ERROR: Timeout while agent waiting for result queue to be free")
+                pass
             
             try: 
                 averaged_weights = self.update_queue.get(timeout=30)
                 self.set_weights(averaged_weights)
-            except self.update_queue.Empty:
+            except Empty:
                 LOGGER.info("ERROR: Timeout while agent waiting for weight update")
+                pass
 
             # Increment the number of weight updates
             LOGGER.info(f"OK: Weights Updated\n")
