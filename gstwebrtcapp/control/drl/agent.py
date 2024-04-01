@@ -17,7 +17,7 @@ class DrlAgent(Agent):
         drl_config: DrlConfig,
         mdp: MDP,
         mqtt_config: MqttConfig,
-        warmup: float = 30.0,
+        warmup: float = 60.0,
     ) -> None:
         super().__init__(mqtt_config)
         self.warmup = warmup
@@ -54,7 +54,7 @@ class FedAgent(Agent):
         config: FedConfig,
         mdp: MDP,
         mqtt_config: MqttConfig,
-        warmup: float = 30.0,
+        warmup: float = 60.0,
     ) -> None:
         super().__init__(mqtt_config)
         self.warmup = warmup

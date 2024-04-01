@@ -18,7 +18,7 @@ class DrlEnv(Env):
         mqtts: MqttPair,
         max_episodes: int = -1,
         state_update_interval: float = 1.0,
-        max_inactivity_time: float = 20.0,
+        max_inactivity_time: float = 300.0,
     ):
         self.mdp = mdp
         self.mqtts = mqtts
@@ -178,7 +178,7 @@ class FedEnv(Env):
         mqtts: MqttPair,
         max_episodes: int = -1,
         state_update_interval: float = 1.0,
-        max_inactivity_time: float = 20.0,
+        max_inactivity_time: float = 300.0,
     ):
         self.mdp = mdp
         self.mqtts = mqtts

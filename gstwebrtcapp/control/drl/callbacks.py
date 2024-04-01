@@ -250,20 +250,24 @@ class FedWeightUpdateCallback(BaseCallback):
         self.update_queue = update_queue
         
     def _on_step(self) -> bool:
-        if(self.num_timesteps % self.update_freq == 0 or self.num_timesteps == 1):
+        if(self.num_timesteps % self.update_freq == 0):
             # Get current weights and put them in the result queue
             weights = self.get_weights()
             self.result_queue.put(weights)
+            self.result_queue.join()
             
             # Wait for updated weights to appear in update_queue, then update the model with them
-            while self.update_queue.empty():
+            while not self.update_queue.full():
                 pass
+
             averaged_weights = self.update_queue.get()
             self.set_weights(averaged_weights)
+            self.update_queue.task_done()
             
             # Increment the number of weight updates
             LOGGER.info(f"OK: Weights Updated\n")
             self.training_env.env_method("increment_weightUpdates")
+            self.update_queue.join()
         return True
     
     def get_weights(self):
