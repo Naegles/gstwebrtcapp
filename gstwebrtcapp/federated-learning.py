@@ -210,14 +210,20 @@ def update_loop(num_workers, result_queue, update_queue):
         # Get all the weights from the result queue
         weights = []
         for i in range(num_workers):
-            if result_queue.empty():
-                weights.append(result_queue.get(timeout=300))
+                try:
+                    weights.append(result_queue.get(timeout=180))
+                except result_queue.Empty:
+                    LOGGER.info("ERROR: Timeout while update_loop waiting for weight update from agents")
+                    
+                
 
         # Average the weights and fill the update queue with the averaged weights
         averaged_weights = average_weights(weights)
         for i in range(num_workers):
-            update_queue.put(averaged_weights)
-            
+            try:
+                update_queue.put(averaged_weights, timeout=30)
+            except update_queue.Full:
+                LOGGER.info("ERROR: Timeout while update_loop waiting for update queue to be free")            
 
 if __name__ == "__main__":
     # Create n federated workers

@@ -257,13 +257,13 @@ class FedWeightUpdateCallback(BaseCallback):
             try:
                 self.result_queue.put(weights, timeout=30)
             except self.result_queue.Full:
-                LOGGER.info("ERROR: Timeout while waiting for result queue to be free")
+                LOGGER.info("ERROR: Timeout while agent waiting for result queue to be free")
             
             try: 
                 averaged_weights = self.update_queue.get(timeout=30)
                 self.set_weights(averaged_weights)
             except self.update_queue.Empty:
-                LOGGER.info("ERROR: Timeout while waiting for weight update")
+                LOGGER.info("ERROR: Timeout while agent waiting for weight update")
 
             # Increment the number of weight updates
             LOGGER.info(f"OK: Weights Updated\n")
