@@ -25,8 +25,6 @@ try:
 except ImportError:
     uvloop = None
 
-AHOY_DIRECTOR_URL = "https://devdirex.wavelab.addix.net/api/v2/feed/attach/"
-API_KEY = "1f3ca3c3c6580a07fca62e18c2d6f325802b681a"
 VIDEO_SOURCE = "rtsp://192.168.178.30"
 PORT_START = 57883
 
@@ -52,13 +50,13 @@ def create_workers(num_workers, result_queue, update_queue, update_freq):
     return workers
 
 
-def test_fed_start(feed_name, seed, result_queue, update_queue, update_freq, isLogging, port):
+def test_fed_start(feed_name, seed, result_queue, update_queue, update_freq, isMain, port):
     if uvloop is not None:
         asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-    asyncio.run(test_fed(feed_name, seed, result_queue, update_queue, update_freq, isLogging, port))
+    asyncio.run(test_fed(feed_name, seed, result_queue, update_queue, update_freq, isMain, port))
 
-async def test_fed(feed_name, seed, result_queue, update_queue, update_freq, isLogging, port):
-    # run it to test drl agent
+async def test_fed(feed_name, seed, result_queue, update_queue, update_freq, isMain, port):
+    # run it to test fed agent
     try:
         mqtt_cfg = MqttConfig(feed_name=feed_name, broker_port=1883)
         episodes = 100
@@ -74,9 +72,10 @@ async def test_fed(feed_name, seed, result_queue, update_queue, update_freq, isL
             is_debug=False
         )
         
-        callbacksToUse = ['print_step', 'federated']
-        verbosity = 1
-        if(isLogging):
+        # Only output and save logs of one of the agents
+        callbacksToUse = ['federated']
+        verbosity = 0
+        if(isMain):
             callbacksToUse = ['print_step', 'federated', 'save_step', 'save_model']
             verbosity = 2
 
@@ -115,14 +114,18 @@ async def test_fed(feed_name, seed, result_queue, update_queue, update_freq, isL
             mqtt_config = mqtt_cfg,
         )
 
-        network_controller = NetworkController(gt_bandwidth=10.0, interval=10.0, interface="lo")
-        network_controller.generate_rules(100, [0.7, 0.2, 0.1])
+        # Make sure there is only one network controller
+        network_controller = None
+        if isMain:
+            network_controller = NetworkController(gt_bandwidth=10.0, interval=30.0, interface="lo")
+            network_controller.generate_rules(100, [0.7, 0.2, 0.1])
 
+        
         conn = SinkConnector(
             pipeline_config=app_cfg,
             agent=agent,
             mqtt_config=mqtt_cfg,
-            network_controller=None,
+            network_controller=network_controller,
             feed_name=feed_name
         )
 
@@ -144,8 +147,6 @@ def update_loop(num_workers, result_queue, update_queue):
                     LOGGER.info("ERROR: Timeout while update_loop waiting for weight update from agents")
                     pass
                     
-                
-
         # Average the weights and fill the update queue with the averaged weights
         averaged_weights = average_weights(weights)
         for i in range(num_workers):
