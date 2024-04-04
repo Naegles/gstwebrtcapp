@@ -158,7 +158,7 @@ def update_loop(num_workers, result_queue, update_queue):
 
 if __name__ == "__main__":
     # Create n federated workers
-    num_workers = 2
+    num_workers = 4
     with Manager() as manager:
         result_queue = manager.Queue(maxsize=num_workers)
         update_queue = manager.Queue(maxsize=num_workers)
