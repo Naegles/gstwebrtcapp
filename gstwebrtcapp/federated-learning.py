@@ -1,12 +1,5 @@
-'''
-Test main functionalities by replacing the default one with one of the desired coroutine presented above in the main() endpoint.
-
-Author:
-    - Nikita Smirnov <nsm@informatik.uni-kiel.de>
-'''
-
 import asyncio
-from multiprocessing import Process, Manager, Queue
+from multiprocessing import Process, Manager, Queue, JoinableQueue
 from aioprocessing import AioManager
 from queue import Empty, Full
 from apps.app import GstWebRTCAppConfig
@@ -91,7 +84,10 @@ async def test_fed(feed_name, seed, result_queue, update_queue, update_freq, isM
                 update_freq=update_freq,
                 hyperparams_cfg={
                     "policy": "MultiInputPolicy",
+                    "gamma" : 0.98,
+                    "learning_rate" : 0.0003,
                     "batch_size": 128,
+                    "tau" : 0.005,
                     "ent_coef": "auto_0.1",
                     "policy_kwargs": {"log_std_init": -1, "activation_fn": "relu", "net_arch": [256, 256]},
                     "learning_starts": 10,
@@ -117,7 +113,7 @@ async def test_fed(feed_name, seed, result_queue, update_queue, update_freq, isM
         # Make sure there is only one network controller
         network_controller = None
         if isMain:
-            network_controller = NetworkController(gt_bandwidth=10.0, interval=30.0, interface="lo")
+            network_controller = NetworkController(gt_bandwidth=30.0, interval=30.0, interface="lo")
             network_controller.generate_rules(100, [0.7, 0.2, 0.1])
 
         
@@ -142,32 +138,26 @@ def update_loop(num_workers, result_queue, update_queue):
         weights = []
         for i in range(num_workers):
                 try:
-                    weights.append(result_queue.get(timeout=180))
+                    weights.append(result_queue.get(180))
+                    result_queue.task_done()
                 except Empty:
                     LOGGER.info("ERROR: Timeout while update_loop waiting for weight update from agents")
-                    pass
                     
         # Average the weights and fill the update queue with the averaged weights
         averaged_weights = average_weights(weights)
         for i in range(num_workers):
             try:
-                update_queue.put(averaged_weights, timeout=30)
+                update_queue.put(averaged_weights, timeout=180)
             except Full:
-                LOGGER.info("ERROR: Timeout while update_loop waiting for update queue to be free") 
-                pass           
+                LOGGER.info("ERROR: Timeout while update_loop waiting for update queue to be free")
+        update_queue.join()           
 
 if __name__ == "__main__":
     # Create n federated workers
-    num_workers = 4
+    num_workers = 3
     with Manager() as manager:
-        result_queue = manager.Queue(maxsize=num_workers)
-        update_queue = manager.Queue(maxsize=num_workers)
-        workers = create_workers(num_workers, result_queue, update_queue, update_freq=10)
+        result_queue = manager.JoinableQueue(maxsize=num_workers)
+        update_queue = manager.JoinableQueue(maxsize=num_workers)
+        workers = create_workers(num_workers, result_queue, update_queue, update_freq=5)
         # Start the weight update loop
         update_loop(num_workers, result_queue, update_queue)  
-        
-    
-    
-    
-    
-    

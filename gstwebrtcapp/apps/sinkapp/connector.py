@@ -128,7 +128,7 @@ class SinkConnector:
             return
 
     async def handle_post_init_pipeline(self) -> None:
-        await async_wait_for_condition(lambda: self._app.bus is not None, timeout_sec=5.0)
+        await async_wait_for_condition(lambda: self._app.bus is not None, timeout_sec=30.0)
         await async_wait_for_condition(lambda: self._app.webrtcsink_elements, timeout_sec=self._app.max_timeout)
         self._app.send_post_init_message_to_bus()
 

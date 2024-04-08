@@ -256,20 +256,20 @@ class FedWeightUpdateCallback(BaseCallback):
             weights = self.get_weights()
 
             try:
-                self.result_queue.put(weights, timeout=30)
+                self.result_queue.put(weights, timeout=180)
             except Full:
                 LOGGER.info("ERROR: Timeout while agent waiting for result queue to be free")
-                pass
+            self.result_queue.join()
             
             try: 
-                averaged_weights = self.update_queue.get(timeout=30)
+                averaged_weights = self.update_queue.get(timeout=180)
                 self.set_weights(averaged_weights)
+                self.update_queue.task_done()
             except Empty:
                 LOGGER.info("ERROR: Timeout while agent waiting for weight update")
-                pass
 
             # Increment the number of weight updates
-            LOGGER.info(f"OK: Weights Updated\n")
+            LOGGER.info(f"OK: Weights Updated")
             self.training_env.env_method("increment_weightUpdates")
         return True
     
