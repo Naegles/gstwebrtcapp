@@ -7,11 +7,11 @@ from apps.pipelines import DEFAULT_SINK_PIPELINE
 from apps.sinkapp.connector import SinkConnector
 from control.drl.agent import FedAgent
 from control.drl.config import FedConfig
-from control.drl.mdp import ViewerMDP
 from control.drl.mdp import ViewerSeqMDP
 from message.client import MqttConfig
 from network.controller import NetworkController
 from utils.base import LOGGER
+from typing import Callable
 
 try:
     import uvloop
@@ -20,6 +20,27 @@ except ImportError:
 
 VIDEO_SOURCE = "rtsp://192.168.178.30"
 PORT_START = 57883
+
+
+def linear_schedule(initial_value: float) -> Callable[[float], float]:
+    """
+    Linear learning rate schedule.
+
+    :param initial_value: Initial learning rate.
+    :return: schedule that computes
+      current learning rate depending on remaining progress
+    """
+    def func(progress_remaining: float) -> float:
+        """
+        Progress will decrease from 1 (beginning) to 0.
+
+        :param progress_remaining:
+        :return: current learning rate
+        """
+        return progress_remaining * initial_value
+
+    return func
+
 
 def average_weights(weights_list):
     weightResult = {}
@@ -72,6 +93,8 @@ async def test_fed(feed_name, seed, result_queue, update_queue, update_freq, isM
             callbacksToUse = ['print_step', 'federated', 'save_step', 'save_model']
             verbosity = 2
 
+        schedule = linear_schedule(0.0007)
+
         agent = FedAgent(
             config=FedConfig(
                 mode="train",
@@ -84,9 +107,9 @@ async def test_fed(feed_name, seed, result_queue, update_queue, update_freq, isM
                 update_freq=update_freq,
                 hyperparams_cfg={
                     "policy": "MultiInputPolicy",
-                    "gamma" : 0.98,
-                    "learning_rate" : 0.0003,
-                    "batch_size": 128,
+                    "gamma" : 0.99,
+                    "learning_rate" : 0.0006,
+                    "batch_size": 256,
                     "tau" : 0.005,
                     "ent_coef": "auto_0.1",
                     "policy_kwargs": {"log_std_init": -1, "activation_fn": "relu", "net_arch": [256, 256]},
@@ -151,6 +174,7 @@ def update_loop(num_workers, result_queue, update_queue):
             except Full:
                 LOGGER.info("ERROR: Timeout while update_loop waiting for update queue to be free")
         update_queue.join()           
+
 
 if __name__ == "__main__":
     # Create n federated workers
