@@ -108,11 +108,11 @@ async def test_fed(feed_name, seed, result_queue, update_queue, update_freq, isM
                 hyperparams_cfg={
                     "policy": "MultiInputPolicy",
                     "gamma" : 0.99,
-                    "learning_rate" : 0.00007,
+                    "learning_rate" : 0.0003,
                     "batch_size": 128,
                     "tau" : 0.005,
                     "ent_coef": "auto_0.1",
-                    "policy_kwargs": {"log_std_init": -1, "activation_fn": "relu", "net_arch": [400, 300]},
+                    "policy_kwargs": {"log_std_init": -1, "activation_fn": "relu", "net_arch": [64, 64]},
                     "learning_starts": 10,
                     "seed" : seed,
                 },
