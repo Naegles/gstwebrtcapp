@@ -98,7 +98,7 @@ async def test_fed(feed_name, seed, result_queue, update_queue, update_freq, isM
         agent = FedAgent(
             config=FedConfig(
                 mode="eval",
-                model_file="fedModels/Agents=3_Configuration=Default + Seq + tc30 + final (batch 128)/drl_model_5000_steps.zip",
+                model_file="fedModels/Agents=3_Configuration=Default + Seq + tc30 + final (batch 512) (lr 0.0003)/drl_model_5000_steps.zip",
                 deterministic=True,
                 model_name="sac",
                 episodes=episodes,
@@ -110,10 +110,10 @@ async def test_fed(feed_name, seed, result_queue, update_queue, update_freq, isM
                 hyperparams_cfg={
                     "policy": "MultiInputPolicy",
                     "gamma" : 0.999,
-                    "learning_rate" : schedule,
+                    "learning_rate" : 0.0003,
                     "batch_size": 512,
                     "tau" : 0.02,
-                    "ent_coef": 0.005,
+                    "ent_coef": 0.1,
                     "policy_kwargs": {"log_std_init": -1, "activation_fn": "relu", "net_arch": [256, 256]},
                     "learning_starts": 10,
                     "seed" : seed,
