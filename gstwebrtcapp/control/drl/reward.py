@@ -200,9 +200,9 @@ class QoeAhoySeq(RewardFunction):
     ) -> Tuple[float, Dict[str, Any | float] | None]:
         super().calculate_reward(states, params)
 
-        # 1. rate: 0...0.25
+        # 1. rate: 0...0.1
         reward_rate = np.log((np.exp(1) - 1) * (get_list_average(self.state["rxGoodput"], is_skip_zeroes=True)) + 1)
-        reward_rate *= 0.25
+        reward_rate *= 0.1
 
         # 2. rtt: 0...0.2
         # 2.1. mean for the last N states - current rtt
