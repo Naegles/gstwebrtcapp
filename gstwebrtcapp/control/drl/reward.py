@@ -107,7 +107,7 @@ class QoeAhoy(RewardFunction):
 
         # 1. rate: 0...0.2
         reward_rate = np.log((np.exp(1) - 1) * (self.state["rxGoodput"]) + 1)
-        reward_rate *= 0.2
+        reward_rate *= 0.1
 
         # 2. rtt: 0...0.2
         # 2.1. mean for the last N states - current rtt
@@ -202,7 +202,7 @@ class QoeAhoySeq(RewardFunction):
 
         # 1. rate: 0...0.1
         reward_rate = np.log((np.exp(1) - 1) * (get_list_average(self.state["rxGoodput"], is_skip_zeroes=True)) + 1)
-        reward_rate *= 0.1
+        reward_rate *= 0.25
 
         # 2. rtt: 0...0.2
         # 2.1. mean for the last N states - current rtt
