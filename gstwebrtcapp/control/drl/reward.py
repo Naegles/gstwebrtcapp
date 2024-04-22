@@ -200,7 +200,7 @@ class QoeAhoySeq(RewardFunction):
     ) -> Tuple[float, Dict[str, Any | float] | None]:
         super().calculate_reward(states, params)
 
-        # 1. rate: 0...0.1
+        # 1. rate: 0...0.25
         reward_rate = np.log((np.exp(1) - 1) * (get_list_average(self.state["rxGoodput"], is_skip_zeroes=True)) + 1)
         reward_rate *= 0.25
 
@@ -227,12 +227,12 @@ class QoeAhoySeq(RewardFunction):
         reward_plr = max(0, 1 - 5 * fraction_loss_rate)
         reward_plr *= 0.25
 
-        # 4. jitter: 0...0.1
+        # 4. jitter: 0...0.2
         # max 250 ms, more than that is very bad, 10 ms jitter is considered to be acceptable
         jitter = max(self.state["interarrivalRttJitter"])
         thresholded_jitter = max(0, jitter - 0.01)
         reward_jitter = max(0, 0.5 - np.sqrt(thresholded_jitter))
-        reward_jitter *= 0.2
+        reward_jitter *= 0.3
 
         # 5. smooth: take rate of change: 0...0.1
         rx_rate_prev = get_list_average(self.prev_state["rxGoodput"]) if self.prev_state is not None else 0.0
