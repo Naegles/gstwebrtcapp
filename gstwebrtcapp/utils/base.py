@@ -1,8 +1,10 @@
 import asyncio
 import logging
 import numpy as np
+import pandas as pd
 import time
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable, Dict, List, Tuple
+
 
 # logger
 LOGGER = logging
@@ -18,7 +20,7 @@ class GSTWEBRTCAPP_EXCEPTION(Exception):
         return f"{self.args[0]}"
 
 
-# general utils
+# TIME
 def wait_for_condition(
     condition_func: Callable[[], bool],
     timeout_sec: int,
@@ -63,6 +65,27 @@ async def async_wait_for_condition(
     return True
 
 
+def sleep_until_condition_with_intervals(
+    num_intervals: int,
+    sleeping_time_sec: float,
+    condition_func: Callable[[], bool],
+) -> bool:
+    """
+    Sleep until condition_func returns True or num_intervals is reached
+    :param num_intervals: number of intervals
+    :param sleeping_time_sec: sleeping time in seconds
+    :param condition_func: callable that returns bool
+    :return: True if condition_func returned True before num_intervals is reached, False otherwise
+    """
+    tick_interval_sec = sleeping_time_sec / num_intervals
+    for _ in range(num_intervals):
+        time.sleep(tick_interval_sec)
+        if condition_func():
+            return True
+    return False
+
+
+# SCALING
 def scale(val: int | float, min: int | float, max: int | float) -> int | float:
     """
     Scale value to 0,1 range
@@ -97,6 +120,7 @@ def unscale(scaled_val: int | float, min: int | float, max: int | float) -> int 
         return scaled_val * (max - min) + min if min < max else min
 
 
+# LIST OPERATIONS
 def merge_observations(observations: List[Dict[str, Dict[str, Any]]]) -> Dict[str, Dict[str, List[Any]]]:
     """
     Merge observations from different agents or several observations from one agent
@@ -231,3 +255,41 @@ def cut_first_elements_in_list(
         num_elements_to_delete = min(num_elements_to_delete, len(input_list) - min_remaining_elements)
     del input_list[:num_elements_to_delete]
     return input_list
+
+
+def extract_network_traces_from_csv(csv_file: str, aggregation_interval: int = 1) -> Tuple[List[float], float]:
+    """
+    Extract aggregated bandwidth values from the csv file. The original interval is assumed to be 1 second.
+    Csv file should contain two columns: bandwidth values and units.
+
+    :param csv_file: csv file with bandwidth values
+    :param aggregation_interval: aggregation interval
+    :return: aggregated bandwidth values and out-of-coverage rate
+    """
+    df = pd.read_csv(csv_file, header=None, delimiter=',')
+    bws = []
+    curr_bandwidth, curr_count = 0, 0
+    ooc_count = 0
+
+    for _, row in df.iterrows():
+        if row[1] == 'Kbits/sec':
+            bandwidth = float(row[0]) / 1e3
+        elif row[1] == 'bits/sec':
+            bandwidth = float(row[0]) / 1e6
+        else:
+            bandwidth = float(row[0])
+
+        if bandwidth < 1:
+            ooc_count += 1
+
+        curr_bandwidth += bandwidth
+        curr_count += 1
+
+        if curr_count == aggregation_interval:
+            average_bandwidth = curr_bandwidth / aggregation_interval
+            bws.append(average_bandwidth)
+            curr_bandwidth, curr_count = 0, 0
+
+    size = len(bws)
+    ooc_rate = ooc_count / size / aggregation_interval if size > 0 else 0
+    return bws, ooc_rate
