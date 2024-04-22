@@ -1,0 +1,23 @@
+Folder Name,Average Reward
+"Agents=3_Configuration=Default + Seq + tc30 + arc=400,300",47.56667091846466
+"Agents=3_Configuration=Default + Seq + tc30 + arc=64,64",48.248790341615674
+Agents=3_Configuration=Default + Seq + tc30 + batch=256 (scaled),48.00536645650864
+Agents=3_Configuration=Default + Seq + tc30 + batch=512 (scaled),48.32036320567131
+Agents=3_Configuration=Default + Seq + tc30 + batch=64 (scaled),47.38389601707458
+Agents=3_Configuration=Default + Seq + tc30 + ent_coef=0.005,48.17800880074501
+Agents=3_Configuration=Default + Seq + tc30 + ent_coef=0.1,46.903983414173126
+Agents=3_Configuration=Default + Seq + tc30 + final (batch 512) (lin 0.0007),48.16207539439201
+Agents=3_Configuration=Default + Seq + tc30 + final (batch 512) (lin 0.0007) (ent 0.1),48.20005149006844
+Agents=3_Configuration=Default + Seq + tc30 + final (batch 512) (lin 0.0028),47.980258882045746
+Agents=3_Configuration=Default + Seq + tc30 + final (batch 512) (lin 0.0028) (ent 0.1),47.19147799611092
+Agents=3_Configuration=Default + Seq + tc30 + final (batch 512) (lr 0.0003),47.72491441965103
+Agents=3_Configuration=Default + Seq + tc30 + final (batch 512) (lr 0.0012),48.20117382407189
+Agents=3_Configuration=Default + Seq + tc30 + gamma=0.95,47.98539465665817
+Agents=3_Configuration=Default + Seq + tc30 + gamma=0.98,47.80386286377907
+Agents=3_Configuration=Default + Seq + tc30 + gamma=0.999,48.0996577322483
+Agents=3_Configuration=Default + Seq + tc30 + gamma=0.9999,47.88947607278824
+Agents=3_Configuration=Default + Seq + tc30 + lr = lin(0.0007),48.204849088191985
+Agents=3_Configuration=Default + Seq + tc30 + lr=0.00007,47.808031052351
+Agents=3_Configuration=Default + Seq + tc30 + tau=0.01,47.96807535290718
+Agents=3_Configuration=Default + Seq + tc30 + tau=0.02,48.168558466434476
+Agents=3_Configuration=Default + Seq + tc30 - 2,47.38446733355522
