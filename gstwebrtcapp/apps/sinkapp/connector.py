@@ -89,15 +89,19 @@ class SinkConnector:
                 threading.Thread(target=self.mqtts.publisher.run, daemon=True).start(),
                 threading.Thread(target=self.mqtts.subscriber.run, daemon=True).start(),
             ]
-            self.mqtts.subscriber.subscribe([self.mqtt_config.topics.actions])
+                
             ######################################## TASKS ########################################
             pipeline_task = asyncio.create_task(self._app.handle_pipeline())
             post_init_pipeline_task = asyncio.create_task(self.handle_post_init_pipeline())
-            webrtcsink_stats_task = asyncio.create_task(self.handle_webrtcsink_stats())
-            actions_task = asyncio.create_task(self.handle_actions())
             be_task = asyncio.create_task(self.handle_bandwidth_estimations())
-            tasks = [pipeline_task, post_init_pipeline_task, webrtcsink_stats_task, actions_task, be_task]
-            if self.agent is not None:
+            tasks = [pipeline_task, post_init_pipeline_task, be_task]
+
+            if  self.agent is not None:
+                webrtcsink_stats_task = asyncio.create_task(self.handle_webrtcsink_stats())
+                self.mqtts.subscriber.subscribe([self.mqtt_config.topics.actions])
+                actions_task = asyncio.create_task(self.handle_actions())
+
+                tasks = [pipeline_task, post_init_pipeline_task, webrtcsink_stats_task, actions_task, be_task]
                 # start agents thread
                 self.agent_thread = threading.Thread(target=self.agent.run, args=(True,), daemon=True)
                 self.agent_thread.start()
