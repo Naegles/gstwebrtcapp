@@ -13,7 +13,7 @@ from utils.base import LOGGER, wait_for_condition
 
 @dataclass
 class MqttGstWebrtcAppTopics:
-    gcc: str = "gstwebrtcapp/gcc"
+    # gcc: str = "gstwebrtcapp/gcc"
     stats: str = "gstwebrtcapp/stats"
     actions: str = "gstwebrtcapp/actions"
 
@@ -105,10 +105,11 @@ class MqttPublisher(MqttClient):
     ) -> None:
         super().__init__(config)
 
-    def publish(self, topic: str, msg: str, id: str = "") -> None:
+    def publish(self, topic: str, msg: str, id: str = "", feed_specific=True) -> None:
         if not self.is_running:
             wait_for_condition(lambda: self.is_running, 10)
-        topic = topic + "_" + self.feed_name
+        if feed_specific:
+            topic = topic + "_" + self.feed_name
         self.client.publish(
             topic,
             json.dumps(
@@ -151,17 +152,19 @@ class MqttSubscriber(MqttClient):
         self.message_queues[msg.topic].put_nowait(mqtt_message)
         LOGGER.debug(f"Received message: {payload}")
 
-    def subscribe(self, topics: List[str], qos: int = 1) -> None:
+    def subscribe(self, topics: List[str], qos: int = 1, feed_specific=True) -> None:
         if not self.is_running:
             wait_for_condition(lambda: self.is_running, 10)
         for topic in topics:
-            topic = topic + "_" + self.feed_name
+            if feed_specific:
+                topic = topic + "_" + self.feed_name
             self.client.subscribe(topic, qos)
             self.client.on_message = self.on_message
             LOGGER.info(f"OK: MQTT subscriber {self.id} has successfully subscribed to {topic}")
 
-    def get_message(self, topic: str) -> MqttMessage | None:
-        topic = topic + "_" + self.feed_name
+    def get_message(self, topic: str, feed_specific=True) -> MqttMessage | None:
+        if feed_specific:
+            topic = topic + "_" + self.feed_name
         queue = self.message_queues.get(topic, None)
         if queue is None:
             LOGGER.error(f"ERROR: No message queue for topic {topic}")
@@ -177,8 +180,9 @@ class MqttSubscriber(MqttClient):
         while not queue.empty():
             _ = queue.get_nowait()
 
-    def is_empty(self, topic: str) -> bool:
-        topic = topic + "_" + self.feed_name
+    def is_empty(self, topic: str, feed_specific=True) -> bool:
+        if(feed_specific):
+            topic = topic + "_" + self.feed_name
         return self.message_queues.get(topic, None).empty()
 
 

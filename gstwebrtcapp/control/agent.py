@@ -45,7 +45,7 @@ class Agent(metaclass=ABCMeta):
             threading.Thread(target=self.mqtts.publisher.run, daemon=True).start(),
             threading.Thread(target=self.mqtts.subscriber.run, daemon=True).start(),
         ]
-        self.mqtts.subscriber.subscribe([self.mqtt_config.topics.gcc])
+        self.mqtts.subscriber.subscribe(["extra_gcc"], feed_specific=False)
         self.mqtts.subscriber.subscribe([self.mqtt_config.topics.stats])
 
     def stop(self) -> None:

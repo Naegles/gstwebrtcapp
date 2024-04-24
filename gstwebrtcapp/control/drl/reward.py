@@ -107,7 +107,7 @@ class QoeAhoy(RewardFunction):
 
         # 1. rate: 0...0.2
         reward_rate = np.log((np.exp(1) - 1) * (self.state["rxGoodput"]) + 1)
-        reward_rate *= 0.1
+        reward_rate *= 0.25
 
         # 2. rtt: 0...0.2
         # 2.1. mean for the last N states - current rtt
@@ -138,7 +138,7 @@ class QoeAhoy(RewardFunction):
         # max 250 ms, more than that is very bad, 10 ms jitter is considered to be acceptable
         thresholded_jitter = max(0, self.state["interarrivalRttJitter"] - 0.01)
         reward_jitter = max(0, 0.5 - np.sqrt(thresholded_jitter))
-        reward_jitter *= 0.2
+        reward_jitter *= 0.3
 
         # 5. smooth: take rate of change: 0...0.1
         rate_prev = self.prev_state["rxGoodput"] if self.prev_state is not None else 0.0
@@ -202,7 +202,7 @@ class QoeAhoySeq(RewardFunction):
 
         # 1. rate: 0...0.25
         reward_rate = np.log((np.exp(1) - 1) * (get_list_average(self.state["rxGoodput"], is_skip_zeroes=True)) + 1)
-        reward_rate *= 0.10
+        reward_rate *= 0.25
 
         # 2. rtt: 0...0.2
         # 2.1. mean for the last N states - current rtt
