@@ -101,7 +101,7 @@ async def test_fed(feed_name, seed, result_queue, update_queue, update_freq, isM
         agent = FedAgent(
             config=FedConfig(
                 mode="eval",
-                model_file="fedModelsReward/rewardRate = 0.10, bandwidth=40.0, jitter = 0.3, extra_gcc/drl_model_5000_steps.zip",
+                model_file="fedModelsReward/rewardRate = 0.10, bandwidth=30.0, jitter = 0.3, extra_gcc/drl_model_5000_steps.zip",
                 deterministic=True,
                 model_name="sac",
                 episodes=episodes,
@@ -123,7 +123,7 @@ async def test_fed(feed_name, seed, result_queue, update_queue, update_freq, isM
                 },
                 callbacks=callbacksToUse,
                 save_log_path="./fedLogsRewardEval",
-                # save_model_path="./fedModelsRewardEval",
+                # save_model_path="./fedModelsReward",
                 verbose=verbosity,
             ),
             mdp=ViewerSeqMDP(
