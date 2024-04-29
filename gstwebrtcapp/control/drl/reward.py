@@ -202,7 +202,7 @@ class QoeAhoySeq(RewardFunction):
 
         # 1. rate: 0...0.25
         reward_rate = np.log((np.exp(1) - 1) * (get_list_average(self.state["rxGoodput"], is_skip_zeroes=True)) + 1)
-        reward_rate *= 0.25
+        reward_rate *= 0.05
 
         # 2. rtt: 0...0.2
         # 2.1. mean for the last N states - current rtt
@@ -219,20 +219,20 @@ class QoeAhoySeq(RewardFunction):
         # final reward is bw 0..0.2
         final_sum_rtt = 0 if sub_sum_rtt >= 0 else max(-0.4, sub_sum_rtt)
         reward_rtt = 0.4 + final_sum_rtt
-        reward_rtt *= 0.5
+        reward_rtt *= 0.25
 
         # 3. plr: 0...0.25
         # plr is not so often but very deadly, so penalize more. Set 20% to be the most critical
         fraction_loss_rate = get_list_average(self.state["fractionLossRate"])
         reward_plr = max(0, 1 - 5 * fraction_loss_rate)
-        reward_plr *= 0.25
+        reward_plr *= 0.30
 
         # 4. jitter: 0...0.2
         # max 250 ms, more than that is very bad, 10 ms jitter is considered to be acceptable
         jitter = max(self.state["interarrivalRttJitter"])
         thresholded_jitter = max(0, jitter - 0.01)
         reward_jitter = max(0, 0.5 - np.sqrt(thresholded_jitter))
-        reward_jitter *= 0.2
+        reward_jitter *= 0.4
 
         # 5. smooth: take rate of change: 0...0.1
         rx_rate_prev = get_list_average(self.prev_state["rxGoodput"]) if self.prev_state is not None else 0.0
@@ -245,16 +245,16 @@ class QoeAhoySeq(RewardFunction):
         # 6. pli rate should not be higher than 0.01%: 0..0.05
         pli_rate = get_list_average(self.state["fractionPliRate"])
         reward_pli = max(0, 1 - (pli_rate * 10000))
-        reward_pli *= 0.05
+        reward_pli *= 0.1
 
         # 7. nack rate should not be higher than 1%: 0..0.05
         nack_rate = get_list_average(self.state["fractionNackRate"])
         reward_nack = max(0, 1 - (nack_rate * 100))
-        reward_nack *= 0.05
+        reward_nack *= 0.1
 
         # final
         reward = reward_rate + reward_rtt + reward_plr + reward_jitter + reward_smooth + reward_pli + reward_nack
-        reward = np.clip(reward, 0, 1)
+        reward = np.clip(reward, 0, 2)
         # ! extra cases:
         # 1. if plr > 25% then reward = 0
         # 2. if rtt > 750ms then reward = 0
