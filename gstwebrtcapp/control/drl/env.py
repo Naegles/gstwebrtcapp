@@ -232,7 +232,7 @@ class FedEnv(Env):
         gcc_max_abs = self.mdp.CONSTANTS["MAX_BANDWIDTH_MBPS"] 
         gcc_min_abs = self.mdp.CONSTANTS["MIN_BANDWIDTH_MBPS"]
 
-        gcc = (gcc - gcc_min_abs) / (gcc_max_abs - gcc_min) * 2 - 1
+        gcc = (gcc - gcc_min_abs) / (gcc_max_abs - gcc_min_abs) * 2 - 1
         
         self.last_action = gcc_min
         self.mqtts.publisher.publish(
