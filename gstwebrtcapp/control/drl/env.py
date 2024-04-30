@@ -234,10 +234,10 @@ class FedEnv(Env):
 
         gcc = (gcc - gcc_min_abs) / (gcc_max_abs - gcc_min_abs) * 2 - 1
         
-        self.last_action = gcc_min
+        self.last_action = [gcc]
         self.mqtts.publisher.publish(
             self.mqtts.subscriber.topics.actions,
-            json.dumps(self.mdp.pack_action_for_controller(gcc)),
+            json.dumps(self.mdp.pack_action_for_controller([gcc])),
         )
 
         # get observation (webrtc stats) from the controller
