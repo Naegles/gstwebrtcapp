@@ -228,12 +228,12 @@ class FedEnv(Env):
         gcc_min = min(gcc)
 
         # Scale between -1 and 1 using gcc_constants
-        gcc_max = self.mdp.CONSTANTS["MAX_BANDWIDTH_MBPS"] 
-        gcc_min = self.mdp.CONSTANTS["MIN_BANDWIDTH_MBPS"]
+        gcc_max_abs = self.mdp.CONSTANTS["MAX_BANDWIDTH_MBPS"] 
+        gcc_min_abs = self.mdp.CONSTANTS["MIN_BANDWIDTH_MBPS"]
 
-        gcc = (gcc - gcc_min) / (gcc_max - gcc_min) * 2 - 1
+        gcc = (gcc - gcc_min_abs) / (gcc_max_abs - gcc_min) * 2 - 1
         
-        self.last_action = gcc
+        self.last_action = gcc_min
         self.mqtts.publisher.publish(
             self.mqtts.subscriber.topics.actions,
             json.dumps(self.mdp.pack_action_for_controller(gcc)),
