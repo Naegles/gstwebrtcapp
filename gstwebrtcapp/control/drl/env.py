@@ -226,6 +226,7 @@ class FedEnv(Env):
         # Use gcc instead of action
         gcc = self.state["bandwidth"]
         gcc_min = min(gcc)
+        gcc_min = gcc_min * 10
 
         # Scale between -1 and 1 using gcc_constants
         gcc_max_abs = self.mdp.CONSTANTS["MAX_BANDWIDTH_MBPS"] 
