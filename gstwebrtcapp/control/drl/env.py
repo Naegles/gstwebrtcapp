@@ -223,10 +223,20 @@ class FedEnv(Env):
 
     def step(self, action):
         self.steps += 1
+        # Use gcc instead of action
+        gcc = self.state["bandwidth"]
+        gcc_min = min(gcc)
+
+        # Scale between -1 and 1 using gcc_constants
+        gcc_max = self.mdp.CONSTANTS["MAX_BANDWIDTH_MBPS"] 
+        gcc_min = self.mdp.CONSTANTS["MIN_BANDWIDTH_MBPS"]
+
+        gcc = (gcc - gcc_min) / (gcc_max - gcc_min) * 2 - 1
+        
         self.last_action = action
         self.mqtts.publisher.publish(
             self.mqtts.subscriber.topics.actions,
-            json.dumps(self.mdp.pack_action_for_controller(action)),
+            json.dumps(self.mdp.pack_action_for_controller(gcc)),
         )
 
         # get observation (webrtc stats) from the controller
