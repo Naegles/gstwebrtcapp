@@ -233,7 +233,7 @@ class FedEnv(Env):
 
         gcc = (gcc - gcc_min) / (gcc_max - gcc_min) * 2 - 1
         
-        self.last_action = action
+        self.last_action = gcc
         self.mqtts.publisher.publish(
             self.mqtts.subscriber.topics.actions,
             json.dumps(self.mdp.pack_action_for_controller(gcc)),
