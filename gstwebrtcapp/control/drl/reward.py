@@ -202,7 +202,7 @@ class QoeAhoySeq(RewardFunction):
 
         # 1. rate: 0...0.25
         reward_rate = np.log((np.exp(1) - 1) * (get_list_average(self.state["rxGoodput"], is_skip_zeroes=True)) + 1)
-        reward_rate *= 0.025
+        reward_rate *= 0.1
 
         # 2. rtt: 0...0.2
         # 2.1. mean for the last N states - current rtt
@@ -244,12 +244,12 @@ class QoeAhoySeq(RewardFunction):
 
         # 6. pli rate should not be higher than 0.01%: 0..0.05
         pli_rate = get_list_average(self.state["fractionPliRate"])
-        reward_pli = max(0, 1 - (pli_rate * 1000))
+        reward_pli = max(0, 1 - (pli_rate * 10000))
         reward_pli *= 0.05
 
         # 7. nack rate should not be higher than 1%: 0..0.05
         nack_rate = get_list_average(self.state["fractionNackRate"])
-        reward_nack = max(0, 1 - (nack_rate * 20))
+        reward_nack = max(0, 1 - (nack_rate * 100))
         reward_nack *= 0.05
 
         # final
