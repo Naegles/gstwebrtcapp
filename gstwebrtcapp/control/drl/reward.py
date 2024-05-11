@@ -148,11 +148,11 @@ class QoeAhoy(RewardFunction):
         reward_smooth *= 0.1
 
         # 6. pli rate should not be higher than 0.1%: 0..0.05
-        reward_pli = max(0, 1 - (self.state["fractionPliRate"] * 1000))
+        reward_pli = max(0, 1 - (self.state["fractionPliRate"] * 10000))
         reward_pli *= 0.05
 
         # 7. nack rate should not be higher than 5%: 0..0.05
-        reward_nack = max(0, 1 - (self.state["fractionNackRate"] * 20))
+        reward_nack = max(0, 1 - (self.state["fractionNackRate"] * 100))
         reward_nack *= 0.05
 
         # final
