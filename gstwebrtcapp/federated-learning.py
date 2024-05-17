@@ -72,7 +72,7 @@ def test_fed_start(feed_name, seed, result_queue, update_queue, update_freq, isM
 async def test_fed(feed_name, seed, result_queue, update_queue, update_freq, isMain, port):
     # run it to test fed agent
     try:
-        mqtt_cfg = MqttConfig(feed_name=feed_name, broker_port=1885)
+        mqtt_cfg = MqttConfig(feed_name=feed_name, broker_port=1884)
         episodes = 10
         episode_length = 50
         stats_update_interval = 2.0
@@ -98,8 +98,8 @@ async def test_fed(feed_name, seed, result_queue, update_queue, update_freq, isM
         agent = FedAgent(
             config=FedConfig(
                 mode="eval",
-                model_file="fedModelsReward/rewardRate = 0.10 - new 300_1/last_default.zip",
-                deterministic=False,
+                model_file="fedModelsReward/rewardRate = 0.05 - new - bitrate15000/drl_model_5000_steps.zip",
+                deterministic=True,
                 model_name="sac",
                 episodes=episodes,
                 episode_length=episode_length,
