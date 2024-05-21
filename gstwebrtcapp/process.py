@@ -31,13 +31,15 @@ def save_to_csv(results, output_file):
 
 # Main function
 def main():
-    folder_path = "fedLogsEval"
-    output_file = "average_rewards.csv"
+    folder_path = "fedLogsRewardEval"
+    output_file = "average_rewards2.csv"
     all_avg_rewards = []
     for entry in os.scandir(folder_path):
         if entry.is_dir():
             avg_rewards = process_folder(entry.path)
             all_avg_rewards.extend(avg_rewards)
+    # Sort by average reward
+    all_avg_rewards.sort(key=lambda x: x[1], reverse=True)
     save_to_csv(all_avg_rewards, output_file)
     print("Average rewards calculated and saved to", output_file)
 
