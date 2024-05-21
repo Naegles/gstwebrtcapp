@@ -23,7 +23,7 @@ def plot_rewards_in_folder(root_folder):
                 plt.figure(figsize=(15, 5))
                 df[column_name].plot(title=f"Training Run")
                 plt.xlabel('Timestep')
-                plt.ylabel(column_name)
+                plt.ylabel('bitrate (bps)')
 
                 # Plot between 0.70 and 0.80
                 # plt.ylim(0.80, 1.00)
