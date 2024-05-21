@@ -15,26 +15,25 @@ def plot_rewards_in_folder(root_folder):
 
                 # Add 1.0 to the column
                 df[column_name] = df[column_name] + 1
+                # Scale between 0 and 1
+                df[column_name] = df[column_name] / 2
 
-                # Use 10 step rolling window
-                df[column_name] = df[column_name].rolling(window=1).mean()
                 
                 # Plot the column
                 plt.figure(figsize=(15, 5))
                 df[column_name].plot(title=f"Training Run")
-                plt.xlabel('Timestep')
+                plt.xlabel('Evaluation Step')
                 plt.ylabel('bitrate (bps)')
 
-                # Plot between 0.70 and 0.80
-                # plt.ylim(0.80, 1.00)
-
-                # Plot x axis from 0 to 100
+                # Plot x axis from 0 to 250
                 plt.xlim(0, 250)
+
+                # Plot y axis from 0 to 1
                 
                 # Save the plot in the same folder as the CSV
-                plot_file_path = subdir + '/' + "bandwidth" + '.png'
+                plot_file_path = subdir + '/' + "bitrate" + '.png'
                 print(plot_file_path)
-                plt.savefig(plot_file_path, dpi=600)
+                plt.savefig(plot_file_path, dpi=600 , bbox_inches='tight')
                 plt.close()
                 print(f"Plot saved for {file} at {plot_file_path}")
 

@@ -53,7 +53,7 @@ def plot_rewards_in_folder(root_folder):
                 
                 # Plot the column
                 plt.figure(figsize=(15, 5))
-                df[column_name].plot(title=f"Training Run")
+                df[column_name].plot(title=f"Evaluation Run")
                 plt.xlabel('Training Step')
                 plt.ylabel("Package Loss Rate")
 

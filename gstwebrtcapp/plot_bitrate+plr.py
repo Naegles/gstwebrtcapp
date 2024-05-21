@@ -46,7 +46,7 @@ def plot_in_folder(root_folder):
                 df = preprocess_csv(df) 
 
 
-                fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 5))
+                fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(15, 5))
 
                 # Plot bitrate
                 bitrate = "action"

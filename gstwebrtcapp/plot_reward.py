@@ -18,20 +18,20 @@ def plot_rewards_in_folder(root_folder):
                 
                 # Plot the column
                 plt.figure(figsize=(15, 5))
-                df[column_name].plot(title=f"Training Run")
-                plt.xlabel('Timestep')
+                df[column_name].plot(title=f"Training Process")
+                plt.xlabel('Training Step')
                 plt.ylabel(column_name)
 
                 # Plot between 0.70 and 0.80
                 # plt.ylim(0.80, 1.00)
 
-                # Plot x axis from 0 to 100
+                # Plot x axis from 0 to 5000
                 plt.xlim(50, 5000)
                 
                 # Save the plot in the same folder as the CSV
                 plot_file_path = subdir + '/' + "reward" + '.png'
                 print(plot_file_path)
-                plt.savefig(plot_file_path, dpi=600)
+                plt.savefig(plot_file_path, dpi=600, bbox_inches='tight')
                 plt.close()
                 print(f"Plot saved for {file} at {plot_file_path}")
 
