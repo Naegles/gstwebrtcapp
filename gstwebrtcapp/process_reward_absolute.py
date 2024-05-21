@@ -57,27 +57,11 @@ def rename_columns(df):
     return df
 
 def finalize_results(df):
+    # Normalize the dataframe
     df = df.apply(pd.to_numeric, errors='coerce')
 
-    # Get the maximum value in each column
-    max_values = df.max()
+    # Round to 3 significant figures
 
-    # Replace the absolute values with deviation from the maximum in percentage
-    for col in df:
-        df[col] = df[col] / max_values[col] * 100
-
-    # Round to 1 significant figures
-    df = df.round(1)
-
-    # Remove trailing zeros
-    df = df.applymap(lambda x: '{:.1f}'.format(x))
-
-    # Add row for actual maximum values
-    df.loc['Max'] = max_values
-
-    
-
-    
     print(df)
     return df
     
@@ -101,10 +85,10 @@ def main():
     processed_results = rename_columns(processed_results)
     processed_results = finalize_results(processed_results)
     print(processed_results)
-                
+
 
     # Save the processed results to a single CSV file
-    processed_results.to_csv('processed_results_percentMax.csv', index=True)
+    processed_results.to_csv('processed_results_absolute_new_sens.csv', index=True)
 
 if __name__ == "__main__":
     main()
