@@ -1,0 +1,33 @@
+Logging to ./fedLogsReward/log_20240521-130325
+---------------------------------
+| rollout/           |          |
+|    ep_len_mean     | 50       |
+|    ep_rew_mean     | 31.1     |
+| time/              |          |
+|    episodes        | 4        |
+|    fps             | 0        |
+|    time_elapsed    | 645      |
+|    total_timesteps | 200      |
+| train/             |          |
+|    actor_loss      | -2.6     |
+|    critic_loss     | 0.0425   |
+|    ent_coef        | 0.1      |
+|    learning_rate   | 0.000672 |
+|    n_updates       | 189      |
+---------------------------------
+---------------------------------
+| rollout/           |          |
+|    ep_len_mean     | 50       |
+|    ep_rew_mean     | 32.5     |
+| time/              |          |
+|    episodes        | 8        |
+|    fps             | 0        |
+|    time_elapsed    | 1284     |
+|    total_timesteps | 400      |
+| train/             |          |
+|    actor_loss      | -5.34    |
+|    critic_loss     | 0.0767   |
+|    ent_coef        | 0.1      |
+|    learning_rate   | 0.000644 |
+|    n_updates       | 389      |
+---------------------------------

@@ -131,7 +131,7 @@ class NetworkController:
         elif scenario == NetworkScenario.OK:
             rate_range = (self.gt_bandwidth * 0.4, self.gt_bandwidth * 0.8)
         elif scenario == NetworkScenario.BAD:
-            rate_range = (self.gt_bandwidth * 0.05, self.gt_bandwidth * 0.2)
+            rate_range = (self.gt_bandwidth * 0.2, self.gt_bandwidth * 0.4)
         rate_value = random.uniform(rate_range[0], rate_range[1])
         return f"rate {rate_value}Mbps"
 
