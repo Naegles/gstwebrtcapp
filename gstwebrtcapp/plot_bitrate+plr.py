@@ -34,7 +34,7 @@ def preprocess_csv(df):
     return df
 
 
-def plot_rewards_in_folder(root_folder):
+def plot_in_folder(root_folder):
     # Walk through the root folder and its subfolders
     for subdir, _, files in os.walk(root_folder):
         for file in files:
@@ -45,31 +45,44 @@ def plot_rewards_in_folder(root_folder):
                 df = pd.read_csv(file_path)  
                 df = preprocess_csv(df) 
 
-                column_name = "state/fractionLossRate"
+
+                fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(15, 5))
+
+                # Plot bitrate
+                bitrate = "action"
+                df[bitrate] = df[bitrate] + 1
+                # Scale between 0 and 1
+                df[bitrate] = df[bitrate] / 2
+
+                ax1.set_title("Bitrate")
+                ax1.plot(df[bitrate], label=bitrate)
+                ax1.set_ylabel('Bitrate')
+                ax1.set_ylim(0.0, 1.0)
+                ax1.set_xlim(0, 250)
+
+        
+                # Plot packet loss
+                packet_loss = "state/fractionLossRate"
+
+                ax2.set_title("Packet Loss")
+                ax2.plot(df[packet_loss], label=packet_loss, color='red')
+                ax2.set_ylabel('Packet Loss')
+                ax2.set_ylim(0.0, 1.0)
+                ax2.set_xlim(0, 250)
+
+                plt.xlabel('Evaluation Step')
 
 
-                # Use 10 step rolling window
-                df[column_name] = df[column_name].rolling(window=1).mean()
-                
-                # Plot the column
-                plt.figure(figsize=(15, 5))
-                df[column_name].plot(title=f"Evaluation Run")
-                plt.xlabel('Training Step')
-                plt.ylabel("Package Loss Rate")
-
-                # Plot between min and max
-                plt.ylim(0.0, 1.0)
-
-                # Plot x axis from 0 to 100
-                plt.xlim(0, 250)
-                
                 # Save the plot in the same folder as the CSV
-                plot_file_path = subdir + '/' + "packet_loss" + '.png'
+                plot_file_path = subdir + '/' + "both" + '.png'
                 print(plot_file_path)
-                plt.savefig(plot_file_path, dpi=600)
+
+                plt.savefig(plot_file_path, dpi=600, bbox_inches='tight')
                 plt.close()
                 print(f"Plot saved for {file} at {plot_file_path}")
 
+
+
 # Specify the root folder
 root_folder = 'fedLogsRewardEval'
-plot_rewards_in_folder(root_folder)
+plot_in_folder(root_folder)
