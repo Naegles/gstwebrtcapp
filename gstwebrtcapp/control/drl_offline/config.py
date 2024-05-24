@@ -19,6 +19,6 @@ class DrlOfflineConfig:
     episodes: int = -1
     episode_length: int = 256
     state_update_interval: float = 3.0
-    state_max_inactivity_time: float = 60.0
+    state_max_inactivity_time: float = 9999.0
     save_log_path: str = './logs'
     device: str | None = None
