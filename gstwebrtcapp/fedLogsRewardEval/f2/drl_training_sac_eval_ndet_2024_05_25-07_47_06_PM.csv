@@ -1,0 +1,1 @@
+step,weightUpdates,episode,action,state/bandwidth,state/fractionLossRate,state/fractionNackRate,state/fractionPliRate,state/fractionQueueingRtt,state/fractionRtt,state/interarrivalRttJitter,state/lossRate,state/rttMean,state/rttStd,state/rxGoodput,state/txGoodput,reward/rew,reward/rate,reward/rtt,reward/plr,reward/jit,reward/smt,reward/pli,reward/nack,reward/pen
