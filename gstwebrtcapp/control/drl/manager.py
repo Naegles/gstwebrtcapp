@@ -131,7 +131,6 @@ class DrlManager:
         else:
             # load the model from the given file
             self.model = self.model_cfg.get_model_class().load(self.model_file, env=self.env, device=self.device)
-            self.model = self.model.load_replay_buffer("fedModelsReward/fixed_rRate = 0.25 1 Agent (crash 220/drl_model_replay_buffer_11000_steps.zip")
             self.is_reset_timesteps = False
             LOGGER.info(
                 f"OK: Successfully loaded {self.config.model_name} model from the given file {self.model_file}!\n"

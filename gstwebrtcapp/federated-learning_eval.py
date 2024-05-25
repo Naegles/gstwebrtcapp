@@ -98,8 +98,8 @@ async def test_fed(feed_name, seed, result_queue, update_queue, update_freq, isM
         agent = FedAgent(
             config=FedConfig(
                 mode="eval",
-                model_file="fedModelsReward/fixed_rRate = 0.25 (crash 65)/drl_model_3000_steps.zip",
-                deterministic=True,
+                model_file="fedModelsReward/fixed_rRate = 0.25 1 Agent/drl_model_15000_steps.zip",
+                deterministic=False,
                 model_name="sac",
                 episodes=episodes,
                 episode_length=episode_length,
