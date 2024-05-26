@@ -27,9 +27,9 @@ EPISODES = 5
 EPISODE_LENGTH = 50
 STATE_UPDATE_INTERVAL = 2
 WEIGHT_AGGREGATION_FREQUENCY = 5
-DETERMINISTIC = False
+DETERMINISTIC = True
 
-MODEL_FILE = f"fedModelsReward/fixed_rRate = 0.25 (crash 84)/drl_model_4000_steps.zip"
+MODEL_FILE = f"fedModelsReward/fixed_rRate = 0.25 1 Agent (crash 220)/drl_model_11000_steps.zip"
 
 
 def linear_schedule(initial_value: float) -> Callable[[float], float]:
